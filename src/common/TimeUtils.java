@@ -26,11 +26,11 @@ public class TimeUtils {
 		return format(TIME_CHN, date);
 	}
 
-	public static String format2Date(SimpleDateFormat sdf, Date date) {
+	public static String format2Date(Date date) {
 		return format(TIME_CHN_DATE, date);
 	}
 
-	public static String format2Hour(SimpleDateFormat sdf, Date date) {
+	public static String format2Hour(Date date) {
 		return format(TIME_CHN_HOUR, date);
 	}
 

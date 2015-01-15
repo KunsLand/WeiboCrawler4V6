@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.json.JSONException;
 import org.jsoup.Jsoup;
@@ -20,35 +21,55 @@ import weibo.login.CookieManager;
 
 public class CrawlUserIndexPage {
 	private CookieManager cm = null;
-	private int timeout = 2*60*1000;
+	private ExceptionHandler handler = null;
 
 	public CrawlUserIndexPage(CookieManager cm) {
 		this.cm = cm;
 	}
+	
+	public void setExceptionHandler(ExceptionHandler eh){
+		this.handler = eh;
+	}
 
-	public UserIndexPage crawl(String uid) throws IOException, JSONException,
-			SQLException {
-		String url = "http://weibo.com/u/" + uid;
-		Document doc = Jsoup.connect(url)
-				.cookies(cm.getCookie()).timeout(timeout).get();
-		doc = WeiboPageUtils.getFullHtml(doc);
-//		Out.println(doc.toString());
-		if(!doc.select("div.page_error").isEmpty()) return null;
-		UserIndexPage uip = new UserIndexPage();
-		Elements counters = doc.select("table.tb_counter strong");
-		uip.UID = uid;
-		uip.FOLLOWS = Integer.valueOf(counters.get(0).ownText());
-		uip.FANS = Integer.valueOf(counters.get(1).ownText());
-		uip.BLOGS = Integer.valueOf(counters.get(2).ownText());
-		uip.NICK_NAME = doc.select("span.username").text();
-		Elements posts =  doc.select("div[action-type="
-						+ "feed_list_item]:not([feedtype=top])"
-						+ " div.WB_detail > div[class=WB_from S_txt2] a");
-		uip.LAST_POST = posts.isEmpty()? null : posts.first().attr("title");
-		uip.VERIFIED = !doc.select(
-				"div.verify_area a[class~=icon_verify_(co_)?v]").isEmpty();
-		Out.println(uip.toString());
-		return uip;
+	public UserIndexPage crawl(String uid){
+		try {
+			String url = "http://www.weibo.com/u/" + uid;
+			Map<String, String> cookie = cm.getCookie();
+			if(cookie == null) {
+				Out.println("No available account for crawling.");
+				System.exit(0);
+			}
+			Document doc = Jsoup.connect(url)
+					.cookies(cookie).get();
+			doc = WeiboPageUtils.getFullHtml(doc);
+			if(!doc.select("div.veriyfycode").isEmpty()){
+				cm.handleVerifycodeException(cookie.get("un"));
+				return null;
+			}
+			if(!doc.select("div.page_error").isEmpty()) {
+				handler.userNotAvailable(uid);
+				return null;
+			}
+			Elements counters = doc.select("table.tb_counter strong");
+			if(counters.isEmpty()) return null;
+			UserIndexPage uip = new UserIndexPage();
+			uip.UID = uid;
+			uip.FOLLOWS = Integer.valueOf(counters.get(0).ownText());
+			uip.FANS = Integer.valueOf(counters.get(1).ownText());
+			uip.BLOGS = Integer.valueOf(counters.get(2).ownText());
+			uip.NICK_NAME = doc.select("span.username").text();
+			Elements posts =  doc.select("div[action-type="
+							+ "feed_list_item]:not([feedtype=top])"
+							+ " div.WB_detail > div[class=WB_from S_txt2] a");
+			uip.LAST_POST = posts.isEmpty()? null : posts.first().attr("title");
+			uip.VERIFIED = !doc.select(
+					"div.verify_area a[class~=icon_verify_(co_)?v]").isEmpty();
+			Out.println(uip.toString());
+			return uip;
+		} catch (IOException | JSONException | SQLException e){
+			Out.println(e.getMessage() + " => " + uid);
+		}
+		return null;
 	}
 
 	public class UserIndexPage {
@@ -64,12 +85,15 @@ public class CrawlUserIndexPage {
 		}
 	}
 
-	public static void main(String[] args) throws SQLException, IOException, JSONException {
+	public static void main(String[] args)
+			throws SQLException, JSONException, IOException {
 		String dburl = "jdbc:mysql://localhost:3306/sinamicroblog?"
 				+ "user=root&password=root";
-		Connection conn = DriverManager.getConnection(dburl);
+		final Connection conn = DriverManager.getConnection(dburl);
 		Statement stmt = conn.createStatement();
-		String sql = "select uid from user_index_page where nickname is null limit 100000";
+		String sql = "select uid from user_index_page"
+				+ " where nickname is null and available != false"
+				+ " and follows_crawled != true limit 100000";
 		ResultSet result = stmt.executeQuery(sql);
 		List<String> uids = new ArrayList<String>();
 		while (result.next()) {
@@ -79,12 +103,27 @@ public class CrawlUserIndexPage {
 		List<UserIndexPage> uips = new ArrayList<UserIndexPage>();
 		CookieManager cm = new CookieManager(dburl, "account");
 		CrawlUserIndexPage cuip = new CrawlUserIndexPage(cm);
+		
+		cuip.setExceptionHandler(new ExceptionHandler(){
+			@Override
+			public void userNotAvailable(String uid) {
+				try {
+					Statement stmt = conn.createStatement();
+					String sql = "update user_index_page set available = false"
+							+ " where uid='" + uid + "'";
+					stmt.execute(sql);
+					stmt.close();
+				} catch (SQLException e) {
+					Out.println(e.getMessage() + " => " + uid);
+				}
+			}
+		});
 		sql = "replace into user_index_page(uid,nickname,verified,"
 				+ "lastpost,follows,fans,blogs) values(?,?,?,?,?,?,?);";
 		PreparedStatement ps = conn.prepareStatement(sql);
+		
 		int count = 0;
 		for(String uid: uids){
-			Out.println("Crawling uid: " + uid);
 			UserIndexPage uip = cuip.crawl(uid);
 			if(uip == null) continue;
 			uips.add(uip);
