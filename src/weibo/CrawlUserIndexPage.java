@@ -20,7 +20,7 @@ import weibo.login.CookieManager;
 
 public class CrawlUserIndexPage {
 	private CookieManager cm = null;
-	private int timeout = 60*1000;
+	private int timeout = 2*60*1000;
 
 	public CrawlUserIndexPage(CookieManager cm) {
 		this.cm = cm;
@@ -32,6 +32,7 @@ public class CrawlUserIndexPage {
 		Document doc = Jsoup.connect(url)
 				.cookies(cm.getCookie()).timeout(timeout).get();
 		doc = WeiboPageUtils.getFullHtml(doc);
+//		Out.println(doc.toString());
 		if(!doc.select("div.page_error").isEmpty()) return null;
 		UserIndexPage uip = new UserIndexPage();
 		Elements counters = doc.select("table.tb_counter strong");
@@ -42,7 +43,7 @@ public class CrawlUserIndexPage {
 		uip.NICK_NAME = doc.select("span.username").text();
 		Elements posts =  doc.select("div[action-type="
 						+ "feed_list_item]:not([feedtype=top])"
-						+ " div[class=WB_from S_txt2] a");
+						+ " div.WB_detail > div[class=WB_from S_txt2] a");
 		uip.LAST_POST = posts.isEmpty()? null : posts.first().attr("title");
 		uip.VERIFIED = !doc.select(
 				"div.verify_area a[class~=icon_verify_(co_)?v]").isEmpty();
@@ -78,9 +79,8 @@ public class CrawlUserIndexPage {
 		List<UserIndexPage> uips = new ArrayList<UserIndexPage>();
 		CookieManager cm = new CookieManager(dburl, "account");
 		CrawlUserIndexPage cuip = new CrawlUserIndexPage(cm);
-		sql = "replace into user_index_page(nickname,verified,"
-				+ "lastpost,follows,fans,blogs) values(?,?,?,?,?,?)"
-				+ " where uid=?";
+		sql = "replace into user_index_page(uid,nickname,verified,"
+				+ "lastpost,follows,fans,blogs) values(?,?,?,?,?,?,?);";
 		PreparedStatement ps = conn.prepareStatement(sql);
 		int count = 0;
 		for(String uid: uids){
@@ -88,16 +88,16 @@ public class CrawlUserIndexPage {
 			UserIndexPage uip = cuip.crawl(uid);
 			if(uip == null) continue;
 			uips.add(uip);
-			ps.setString(1, uip.NICK_NAME);
-			ps.setBoolean(2, uip.VERIFIED);
-			ps.setString(3, uip.LAST_POST);
-			ps.setInt(4, uip.FOLLOWS);
-			ps.setInt(5, uip.FANS);
-			ps.setInt(6, uip.BLOGS);
-			ps.setString(7, uip.UID);
+			ps.setString(1, uip.UID);
+			ps.setString(2, uip.NICK_NAME);
+			ps.setBoolean(3, uip.VERIFIED);
+			ps.setString(4, uip.LAST_POST);
+			ps.setInt(5, uip.FOLLOWS);
+			ps.setInt(6, uip.FANS);
+			ps.setInt(7, uip.BLOGS);
 			ps.addBatch();
-			if(++count == 100) {
-				Out.println("100 batches saving ...");
+			if(++count == 50) {
+				Out.println("50 batches saving ...");
 				ps.executeBatch();
 				count = 0;
 			}
