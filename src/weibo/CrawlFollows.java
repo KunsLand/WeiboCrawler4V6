@@ -46,7 +46,8 @@ public class CrawlFollows {
 						+ uid + "&page=" + i;
 				Map<String, String> cookie = cm.getCookie();
 				Response res = Jsoup.connect(url).cookies(cookie).execute();
-				if(!res.url().toString().startsWith("http://gov.")){
+				String redirected_url = res.url().toString();
+				if(!redirected_url.startsWith("http://gov.")){
 					Out.println("ENTERPRISE => " + uid);
 					return null;
 				}
@@ -57,6 +58,13 @@ public class CrawlFollows {
 				}
 				if(!doc.select("div.page_error").isEmpty()) {
 					handler.userNotAvailable(uid);
+					return null;
+				}
+				else if(!doc.select("div#pl_common_unloginbase").isEmpty())
+					cm.refreshCookie(cookie.get("un"));
+				else if(redirected_url.contains("/signup/signup.php")
+						|| redirected_url.contains("http://passport")){
+					cm.refreshCookie(cookie.get("un"));
 					return null;
 				}
 				Elements el = doc.select("a[namecard=true]");
@@ -70,7 +78,8 @@ public class CrawlFollows {
 		return null;
 	}
 
-	public static void main(String[] args) throws SQLException {
+	public static void main(String[] args)
+			throws SQLException, IOException, JSONException {
 		String dburl = "jdbc:mysql://localhost:3306/sinamicroblog?"
 				+ "user=root&password=root";
 		final Connection conn = DriverManager.getConnection(dburl);
@@ -106,7 +115,7 @@ public class CrawlFollows {
 		PreparedStatement ps = conn.prepareStatement(sql);
 		for(String uid: pairs.keySet()){
 			List<String> follows = cf.crawl(uid, pairs.get(uid));
-			if(follows.isEmpty()) continue;
+			if(follows == null) continue;
 			Out.println("=> " + follows.size());
 			for(String u: follows){
 				ps.setString(1, u);

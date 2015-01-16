@@ -39,12 +39,13 @@ public class CookieManager {
 		cookies = new HashMap<String, Map<String, String>>();
 	}
 
-	public CookieManager(String dburl, String table) throws SQLException {
+	public CookieManager(String dburl, String table)
+			throws SQLException, IOException, JSONException {
 		conn = DriverManager.getConnection(dburl);
 		this.table = table;
 		Statement stmt = conn.createStatement();
 		String verifycode_time = TimeUtils.format2Minute(new Date(System
-				.currentTimeMillis() - 3600 * 24));
+				.currentTimeMillis() - 3600 * 24* 1000));
 		String sql = "select account, password, cookie from " + table
 				+ " where banned=false and (verifycode_time is null or"
 				+ " verifycode_time <= '" + verifycode_time + "')";
@@ -56,6 +57,13 @@ public class CookieManager {
 					.getString(2), cookieStr = result.getString(3);
 			accounts.put(account, password);
 			Map<String, String> cookie = cookieString2Map(cookieStr);
+			if(cookie == null){ cookie = login(account, password);
+				if(cookie == null) {
+					Out.println("LOGIN FAILED => " + account);
+					if (conn != null) handleVerifycodeException(account);
+					continue;
+				} else storeCookie(account, cookie.toString());
+			}
 			cookie.put("un", account);
 			cookies.put(account, cookie);
 		}
@@ -83,26 +91,22 @@ public class CookieManager {
 
 	public void refreshCookie(String account) throws IOException,
 			JSONException, SQLException {
+		Out.println("REFRESH => " + account);
 		Map<String, String> cookie = login(account, accounts.get(account));
 		if (cookie == null) {
-			Out.println("BAN => " + account);
-			if (conn == null)
-				return;
-			String sql = "update " + table
-					+ " set banned = true where account = ?";
-			PreparedStatement stmt = conn.prepareStatement(sql);
-			stmt.setString(1, account);
-			stmt.execute();
-			stmt.close();
+			Out.println("REFRESH FAILED => " + account);
+			if (conn != null) handleVerifycodeException(account);
 			return;
 		}
 		cookie.put("un", account);
 		cookies.put(account, cookie);
-		if (conn == null)
-			return;
+		if (conn != null) storeCookie(account, cookie.toString());
+	}
+	
+	public void storeCookie(String account, String cookie) throws SQLException{
 		String sql = "update " + table + " set cookie = ? where account = ?";
 		PreparedStatement stmt = conn.prepareStatement(sql);
-		stmt.setString(1, cookie.toString());
+		stmt.setString(1, cookie);
 		stmt.setString(2, account);
 		stmt.execute();
 		stmt.close();
@@ -166,8 +170,7 @@ public class CookieManager {
 				.cookies(res.cookies()).followRedirects(true).execute();
 
 		Elements els = res.parse().select("html head meta[http-equiv=refresh]");
-		if (els.isEmpty())
-			return null;
+		if (els.isEmpty()) return null;
 		String redirect_url = els.first().attr("content");
 		redirect_url = redirect_url.substring(8, redirect_url.length() - 1);
 		res = Jsoup.connect(redirect_url).timeout(timeout)
@@ -180,12 +183,7 @@ public class CookieManager {
 			JSONException, SQLException {
 		if(uns.size() == 0) return null;
 		if (count >= uns.size()) count = 0;
-		String acc = uns.get(count++);
-		Map<String, String> cookie = cookies.get(acc);
-		if (cookie == null)
-			refreshCookie(acc);
-		cookie = cookies.get(acc);
-		return cookie;
+		return cookies.get(uns.get(count++));
 	}
 
 	public Map<String, String> getCookie(String account) {
@@ -200,6 +198,7 @@ public class CookieManager {
 			throws SQLException {
 		Out.println("VERIFYCODE => " + account);
 		cookies.remove(account);
+		if(uns.contains(account)) uns.remove(account);
 		String sql = "update " + table + " set verifycode_time = ?"
 				+ " where account = ?";
 		PreparedStatement stmt = conn.prepareStatement(sql);

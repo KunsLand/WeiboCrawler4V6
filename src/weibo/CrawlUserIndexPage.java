@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.json.JSONException;
+import org.jsoup.Connection.Response;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -23,7 +24,9 @@ public class CrawlUserIndexPage {
 	private CookieManager cm = null;
 	private ExceptionHandler handler = null;
 
-	public CrawlUserIndexPage(CookieManager cm) {
+	public CrawlUserIndexPage() {}
+	
+	public void setCookieManager(CookieManager cm){
 		this.cm = cm;
 	}
 	
@@ -34,18 +37,31 @@ public class CrawlUserIndexPage {
 	public UserIndexPage crawl(String uid){
 		try {
 			String url = "http://www.weibo.com/u/" + uid;
-			Map<String, String> cookie = cm.getCookie();
-			if(cookie == null) {
-				Out.println("No available account for crawling.");
-				System.exit(0);
-			}
-			Document doc = Jsoup.connect(url)
-					.cookies(cookie).get();
+			Map<String, String> cookie = null;
+			Document doc = null;
+			if(cm != null){
+				cookie = cm.getCookie();
+				if(cookie == null) {
+					Out.println("No available account for crawling.");
+					System.exit(0);
+				}
+				Response res = Jsoup.connect(url)
+						.cookies(cookie).followRedirects(true).execute();
+				doc = res.parse();
+				String redirected_url = res.url().toString();
+				if(!doc.select("div.veriyfycode").isEmpty()){
+					cm.handleVerifycodeException(cookie.get("un"));
+					return null;
+				}
+				else if(!doc.select("div#pl_common_unloginbase").isEmpty())
+					cm.refreshCookie(cookie.get("un"));
+				else if(redirected_url.contains("/signup/signup.php")
+						|| redirected_url.contains("http://passport")){
+					cm.refreshCookie(cookie.get("un"));
+					return null;
+				}
+			} else doc = Jsoup.connect(url).followRedirects(true).get();
 			doc = WeiboPageUtils.getFullHtml(doc);
-			if(!doc.select("div.veriyfycode").isEmpty()){
-				cm.handleVerifycodeException(cookie.get("un"));
-				return null;
-			}
 			if(!doc.select("div.page_error").isEmpty()) {
 				handler.userNotAvailable(uid);
 				return null;
@@ -101,8 +117,9 @@ public class CrawlUserIndexPage {
 		}
 		stmt.close();
 		List<UserIndexPage> uips = new ArrayList<UserIndexPage>();
+		CrawlUserIndexPage cuip = new CrawlUserIndexPage();
 		CookieManager cm = new CookieManager(dburl, "account");
-		CrawlUserIndexPage cuip = new CrawlUserIndexPage(cm);
+		cuip.setCookieManager(cm);
 		
 		cuip.setExceptionHandler(new ExceptionHandler(){
 			@Override
@@ -124,6 +141,7 @@ public class CrawlUserIndexPage {
 		
 		int count = 0;
 		for(String uid: uids){
+			Out.println("uid => " + uid);
 			UserIndexPage uip = cuip.crawl(uid);
 			if(uip == null) continue;
 			uips.add(uip);
