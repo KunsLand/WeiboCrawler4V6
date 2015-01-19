@@ -62,7 +62,11 @@ public class CookieManager {
 					Out.println("LOGIN FAILED => " + account);
 					if (conn != null) handleVerifycodeException(account);
 					continue;
-				} else storeCookie(account, cookie.toString());
+				} else if(cookie.containsKey("login_sid_t")) {
+					Out.println("INVALID (account,passwod) => " + account);
+					continue;
+				}
+				else storeCookie(account, cookie.toString());
 			}
 			cookie.put("un", account);
 			cookies.put(account, cookie);
@@ -198,7 +202,7 @@ public class CookieManager {
 			throws SQLException {
 		Out.println("VERIFYCODE => " + account);
 		cookies.remove(account);
-		if(uns.contains(account)) uns.remove(account);
+		if(uns!=null && uns.contains(account)) uns.remove(account);
 		String sql = "update " + table + " set verifycode_time = ?"
 				+ " where account = ?";
 		PreparedStatement stmt = conn.prepareStatement(sql);

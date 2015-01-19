@@ -49,17 +49,16 @@ public class CrawlUserIndexPage {
 						.cookies(cookie).followRedirects(true).execute();
 				doc = res.parse();
 				String redirected_url = res.url().toString();
-				if(!doc.select("div.veriyfycode").isEmpty()){
-					cm.handleVerifycodeException(cookie.get("un"));
-					return null;
-				}
-				else if(!doc.select("div#pl_common_unloginbase").isEmpty())
-					cm.refreshCookie(cookie.get("un"));
-				else if(redirected_url.contains("/signup/signup.php")
+				if(redirected_url.contains("/signup/signup.php")
+						|| redirected_url.contains("login.php")
 						|| redirected_url.contains("http://passport")){
 					cm.refreshCookie(cookie.get("un"));
 					return null;
-				}
+				} else if(!doc.select("div.veriyfycode").isEmpty()){
+					cm.handleVerifycodeException(cookie.get("un"));
+					return null;
+				} else if(!doc.select("div#pl_common_unloginbase").isEmpty())
+					cm.refreshCookie(cookie.get("un"));
 			} else doc = Jsoup.connect(url).followRedirects(true).get();
 			doc = WeiboPageUtils.getFullHtml(doc);
 			if(!doc.select("div.page_error").isEmpty()) {

@@ -45,9 +45,18 @@ public class CrawlFollows {
 				String url = "http://gov.weibo.com/attention/attsList.php?action=1&uid="
 						+ uid + "&page=" + i;
 				Map<String, String> cookie = cm.getCookie();
+				if(cookie==null) {
+					Out.println("NO AVAILABLE COOKIES.");
+					System.exit(0);
+				}
 				Response res = Jsoup.connect(url).cookies(cookie).execute();
 				String redirected_url = res.url().toString();
-				if(!redirected_url.startsWith("http://gov.")){
+				if(redirected_url.contains("/signup/signup.php")
+						|| redirected_url.contains("login.php")
+						|| redirected_url.contains("http://passport")){
+					cm.refreshCookie(cookie.get("un"));
+					return null;
+				} else if(!redirected_url.startsWith("http://gov.")){
 					Out.println("ENTERPRISE => " + uid);
 					return null;
 				}
@@ -59,14 +68,8 @@ public class CrawlFollows {
 				if(!doc.select("div.page_error").isEmpty()) {
 					handler.userNotAvailable(uid);
 					return null;
-				}
-				else if(!doc.select("div#pl_common_unloginbase").isEmpty())
+				} else if(!doc.select("div#pl_common_unloginbase").isEmpty())
 					cm.refreshCookie(cookie.get("un"));
-				else if(redirected_url.contains("/signup/signup.php")
-						|| redirected_url.contains("http://passport")){
-					cm.refreshCookie(cookie.get("un"));
-					return null;
-				}
 				Elements el = doc.select("a[namecard=true]");
 //				Out.println(el.attr("uid"));
 				for(Element e:el) fol.add(e.attr("uid"));
