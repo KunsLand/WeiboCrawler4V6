@@ -49,8 +49,9 @@ public class MySQLDataBase {
 		String verifycode_time = TimeUtils.format2Minute(new Date(System
 				.currentTimeMillis() - 3600 * 24 * 1000));
 		String sql = "select account, password, cookie from account"
-				+ " where banned=false and (verifycode_time is null or"
-				+ " verifycode_time <= '" + verifycode_time + "')";
+				+ " where banned=false and freeze=false and ("
+				+ "verifycode_time is null or verifycode_time <= '"
+				+ verifycode_time + "')";
 		ResultSet result = stmt.executeQuery(sql);
 		while (result.next()) {
 			WeiboAccount acc = new WeiboAccount();
@@ -59,6 +60,30 @@ public class MySQLDataBase {
 			acc.COOKIES = cookieString2Map(result.getString(3));
 			accs.put(acc.UN, acc);
 		}
+		stmt.close();
+		Out.println("NUM OF AVAILABLE ACCOUNTS => " + accs.size());
+		return accs;
+	}
+
+	public Map<String, WeiboAccount> getFirstAvailableWeiboAccount()
+			throws SQLException {
+		Map<String, WeiboAccount> accs = new HashMap<String, WeiboAccount>();
+		Statement stmt = conn.createStatement();
+		String verifycode_time = TimeUtils.format2Minute(new Date(System
+				.currentTimeMillis() - 3600 * 24 * 1000));
+		String sql = "select account, password, cookie from account"
+				+ " where banned=false and freeze=false and ("
+				+ "verifycode_time is null or verifycode_time <= '"
+				+ verifycode_time + "') limit 1";
+		ResultSet result = stmt.executeQuery(sql);
+		while (result.next()) {
+			WeiboAccount acc = new WeiboAccount();
+			acc.UN = result.getString(1);
+			acc.PSWD = result.getString(2);
+			acc.COOKIES = cookieString2Map(result.getString(3));
+			accs.put(acc.UN, acc);
+		}
+		stmt.close();
 		return accs;
 	}
 
@@ -94,7 +119,7 @@ public class MySQLDataBase {
 	public void setAccountVerifyCodeTime(String account) {
 		try {
 			Statement stmt = conn.createStatement();
-			String sql = "update account set verifycode_time = '"
+			String sql = "update account set cookie=null, verifycode_time = '"
 					+ TimeUtils.format2Minute(new Date()) + "' where account='"
 					+ account + "'";
 			stmt.execute(sql);
@@ -167,7 +192,7 @@ public class MySQLDataBase {
 		String sql = "replace into user_index_page(uid,nickname,verified,"
 				+ "lastpost,follows,fans,blogs) values(?,?,?,?,?,?,?);";
 		PreparedStatement ps = conn.prepareStatement(sql);
-		for(UserIndexPage uip: uips){
+		for (UserIndexPage uip : uips) {
 			ps.setString(1, uip.UID);
 			ps.setString(2, uip.NICK_NAME);
 			ps.setBoolean(3, uip.VERIFIED);
@@ -179,5 +204,18 @@ public class MySQLDataBase {
 		}
 		ps.executeBatch();
 		ps.close();
+	}
+
+	public void updateAccountCookie(String account, String cookie) {
+		String sql = "update account set verifycode_time=null, cookie='"
+				+ cookie + "'" + " where account='" + account + "'";
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			stmt.execute(sql);
+			stmt.close();
+		} catch (SQLException e) {
+			Out.println(e.getMessage() + " => " + account);
+		}
 	}
 }

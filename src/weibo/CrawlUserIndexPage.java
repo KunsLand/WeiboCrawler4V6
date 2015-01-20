@@ -30,6 +30,12 @@ public class CrawlUserIndexPage {
 			public void freezeException(String account) {
 				mysql.setAccountFreezed(account);
 			}
+
+			@Override
+			public void updateCookie(WeiboAccount account) {
+				mysql.updateAccountCookie(
+						account.UN, account.COOKIES.toString());
+			}
 		});
 		
 		int count = 0;

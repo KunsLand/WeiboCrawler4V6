@@ -29,6 +29,12 @@ public class CrawlFollows {
 			public void freezeException(String account) {
 				mysql.setAccountFreezed(account);
 			}
+
+			@Override
+			public void updateCookie(WeiboAccount account) {
+				mysql.updateAccountCookie(
+						account.UN, account.COOKIES.toString());
+			}
 		});
 		for(String uid: pairs.keySet()){
 			List<String> follows = weiboClient.getAllFollows(uid, pairs.get(uid));

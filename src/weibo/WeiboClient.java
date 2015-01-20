@@ -25,6 +25,7 @@ public class WeiboClient {
 	private List<String> uns = null;
 	private int count = 0;
 	private ExceptionHandler handler = null;
+	private static int TIMEOUT = 60 * 1000;
 
 	public WeiboClient(Map<String, WeiboAccount> accounts,
 			ExceptionHandler handler) {
@@ -33,7 +34,11 @@ public class WeiboClient {
 		this.handler = handler;
 	}
 
-	public Map<String, String> login(String account, String password)
+	public static void setTimeout(int seconds) {
+		TIMEOUT = seconds * 1000;
+	}
+
+	public static Map<String, String> login(String account, String password)
 			throws IOException, JSONException {
 		Out.println("LOGIN => " + account);
 		String client_js_version = "v1.4.18";
@@ -44,8 +49,8 @@ public class WeiboClient {
 				/ 1000;
 		String login_url = "http://login.sina.com.cn/sso/login.php?"
 				+ "client=ssologin.js(" + client_js_version + ")";
-		Response res = Jsoup.connect(prelogin_url).ignoreContentType(true)
-				.execute();
+		Response res = Jsoup.connect(prelogin_url).timeout(TIMEOUT)
+				.ignoreContentType(true).execute();
 
 		String php = res.body();
 		php = php.substring(php.indexOf("(") + 1, php.indexOf(")"));
@@ -64,6 +69,7 @@ public class WeiboClient {
 
 		res = Jsoup
 				.connect(login_url)
+				.timeout(TIMEOUT)
 				.data("entry", "weibo")
 				.data("gateway", "1")
 				.data("from", "")
@@ -85,13 +91,13 @@ public class WeiboClient {
 								+ "&callback=parent.sinaSSOController.feedBackUrlCallBack")
 				.data("returntype", "META").method(Method.POST)
 				.referrer("http://weibo.com").cookies(res.cookies()).execute();
-		
-		Out.println(res.body());
 
-		res = Jsoup.connect("http://weibo.com/login.php")
+		// Out.println(res.body());
+
+		res = Jsoup.connect("http://weibo.com/login.php").timeout(TIMEOUT)
 				.cookies(res.cookies()).followRedirects(true).execute();
 
-		Out.println(res.body());
+		// Out.println(res.body());
 
 		Elements els = res.parse().select("html head meta[http-equiv=refresh]");
 		if (els.isEmpty())
@@ -99,7 +105,7 @@ public class WeiboClient {
 		String redirect_url = els.first().attr("content");
 		redirect_url = redirect_url.substring(8, redirect_url.length() - 1);
 		res = Jsoup.connect(redirect_url).cookies(res.cookies())
-				.followRedirects(true).execute();
+				.timeout(TIMEOUT).followRedirects(true).execute();
 		Out.println(res.cookies().toString());
 		return res.cookies();
 	}
@@ -112,10 +118,18 @@ public class WeiboClient {
 			for (int i = 1; i <= pages; i++) {
 				String url = "http://gov.weibo.com/attention/attsList.php"
 						+ "?action=1&uid=" + uid + "&page=" + i;
-				Response res = Jsoup.connect(url).cookies(getAccount().COOKIES)
-						.followRedirects(true).execute();
-				if (!res.url().toString().startsWith("http://gov.weibo.com"))
+				WeiboAccount acc = getAccount();
+				if (acc.COOKIES == null) {
+					Out.println("No Available Account.");
+					System.exit(0);
+				}
+				Response res = Jsoup.connect(url).cookies(acc.COOKIES)
+						.timeout(TIMEOUT).followRedirects(true).execute();
+				String redirected_url = res.url().toString();
+				if (!redirected_url.startsWith("http://gov.weibo.com")) {
+					Out.println("REDIRECTED TO => " + redirected_url);
 					return null;
+				}
 				Document doc = res.parse();
 				Elements el = doc.select("a[namecard=true]");
 				for (Element e : el)
@@ -131,7 +145,10 @@ public class WeiboClient {
 	public UserIndexPage getUserIndexPage(String uid) {
 		try {
 			String url = "http://www.weibo.com/u/" + uid;
-			Document doc = getHtmlDocument(url);
+			WeiboAccount acc = getAccount();
+			Document doc = getHtmlDocument(acc, url);
+			if (doc == null)
+				return null;
 			Elements counters = doc.select("table.tb_counter strong");
 			if (!doc.select("div.page_error").isEmpty()) {
 				handler.userNotAvailable(uid);
@@ -139,8 +156,14 @@ public class WeiboClient {
 			}
 			if (counters.isEmpty()) {
 				Out.println(uid + " => Incomplete index page.");
+				acc.INCOMPLETE_COUNTER++;
+				if (acc.INCOMPLETE_COUNTER > 5) {
+					refreshAccount(acc.UN);
+				}
 				return null;
 			}
+			if (acc.INCOMPLETE_COUNTER > 0)
+				acc.INCOMPLETE_COUNTER--;
 			UserIndexPage uip = new UserIndexPage();
 			uip.UID = uid;
 			uip.FOLLOWS = Integer.valueOf(counters.get(0).ownText());
@@ -162,31 +185,32 @@ public class WeiboClient {
 		return null;
 	}
 
-	public Document getHtmlDocument(String url) throws IOException,
-			JSONException {
-		WeiboAccount acc = getAccount();
+	public Document getHtmlDocument(WeiboAccount acc, String url)
+			throws IOException, JSONException {
 		if (acc == null) {
 			Out.println("No available account for crawling.");
 			System.exit(0);
 		}
-		Response res = Jsoup.connect(url).cookies(acc.COOKIES)
+		Response res = Jsoup.connect(url).cookies(acc.COOKIES).timeout(TIMEOUT)
 				.followRedirects(true).execute();
 		Document doc = getFullHtml(res.parse());
 		String redirected_url = res.url().toString();
 		if (redirected_url.contains("http://sass.weibo")
 				|| redirected_url.contains("sorry?userblock")) {
 			handler.freezeException(acc.UN);
+			removeAccount(acc.UN);
 			return null;
 		} else if (redirected_url.contains("/signup/signup.php")
 				|| redirected_url.contains("login.php")
 				|| redirected_url.contains("http://passport")) {
-			acc.COOKIES = login(acc.UN, acc.PSWD);
+			refreshAccount(acc.UN);
 			return null;
 		} else if (!doc.select("div.veriyfycode").isEmpty()) {
 			handler.verifycodeException(acc.UN);
+			removeAccount(acc.UN);
 			return null;
 		} else if (!doc.select("div#pl_common_unloginbase").isEmpty()) {
-			acc.COOKIES = login(acc.UN, acc.PSWD);
+			refreshAccount(acc.UN);
 		}
 		return doc;
 	}
@@ -205,17 +229,44 @@ public class WeiboClient {
 		return Jsoup.parse(sb.toString());
 	}
 
+	public synchronized void refreshAccount(String un) throws IOException,
+			JSONException {
+		WeiboAccount acc = accounts.get(un);
+		if(acc==null) return;
+		acc.COOKIES = login(acc.UN, acc.PSWD);
+		acc.LOGIN_COUNTER++;
+		acc.INCOMPLETE_COUNTER = 0;
+		if (acc.COOKIES == null || acc.COOKIES.containsKey("login_sid_t")) {
+			Out.println("ACCOUNT LIMITED => ( UN=" + acc.UN + ", RC="
+					+ acc.REQUEST_COUNTER + ", LC=" + acc.LOGIN_COUNTER + " )");
+			handler.verifycodeException(acc.UN);
+			accounts.remove(acc.UN);
+			uns.remove(acc.UN);
+		} else
+			handler.updateCookie(acc);
+		Out.println("NUM OF ACCOUNTS IN USE => " + accounts.size());
+	}
+
 	public synchronized WeiboAccount getAccount() throws IOException,
 			JSONException {
-		if (accounts.size() == 0)
-			return null;
-		if (count >= accounts.size())
-			count = 0;
-		String account = uns.get(count++);
-		Out.println(count + " / " + uns.size() + " => " + account);
-		WeiboAccount acc = accounts.get(account);
-		if(acc.COOKIES == null) acc.COOKIES = login(acc.UN, acc.PSWD);
-		acc.REQUEST_COUNTER++;
+		WeiboAccount acc = null;
+		do {
+			if (accounts.size() == 0)
+				break;
+			if (count >= accounts.size())
+				count = 0;
+			String account = uns.get(count++);
+			// Out.println(count + " / " + uns.size() + " => " + account);
+			acc = accounts.get(account);
+			if (acc.COOKIES == null)
+				refreshAccount(account);
+			acc.REQUEST_COUNTER++;
+		} while (acc.COOKIES == null);
 		return acc;
+	}
+	
+	public synchronized void removeAccount(String un){
+		accounts.remove(un);
+		uns.remove(un);
 	}
 }
