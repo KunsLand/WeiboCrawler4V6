@@ -12,7 +12,7 @@ See more in [CrawlUserIndexPage].
 #### How to crawl user relation?
 Sina Weibo has a strict access rate limiting to prevent any web crawler sending too many requests to the website server. And also if you mannually visit the follows list or fans list of any others, you can only view about 200 of all follows or fans.
 
-This project figured out how to skip these limitation to access the follows list of any accessible user. One thing different from crawling user index page information is that you need a group of valid registered Sina Weibo accounts and your accounts are highly risk of being __BANNED FOREVER__.
+This project figured out how to overcome these limitations of accessing the follows list of any accessible user. One thing different from crawling user index page information is that you need a group of registered and valid Sina Weibo accounts and your accounts are highly risk of being __BANNED FOREVER__.
 
 See more in [CrawlFollows].
 
