@@ -5,7 +5,7 @@ This project is just a toy web crawling program. It does not leak any personal i
 
 # How to use this crawler?
 #### How to crawl user index page information?
-You may think you need a valid, regular, limitless Weibo account to access the user index page. But a critical problem here is that your account will be limited to access the recources from the website server if you send too many requests during a short range of time(see the access [rate-limiting]). This project figured out how to access the user index page as a visitor and with no access rate-limiting.
+You may think you need a valid, regular, limitless Weibo account to access the user index page. But a critical problem here is that your account will be limited to access the recources from the website server if you send too many requests during a short range of time(see the access [rate-limiting]). This project figured out how to access the user index page as a __VISITOR__ and with no access rate-limiting.
 
 See more in [CrawlUserIndexPage].
 
@@ -16,7 +16,7 @@ This project figured out how to skip these limitation to access the follows list
 
 See more in [CrawlFollows].
 
-### Where is the inital user ids from?
+### Where is the initial user ids from?
 The user ids come from the [Hall of Fame]. How did I get all of these user ids? You should figure out by yourself.
 
 [Sina Weibo]:http://weibo.com
