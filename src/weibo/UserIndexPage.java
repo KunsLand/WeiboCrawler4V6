@@ -2,8 +2,7 @@ package weibo;
 
 public class UserIndexPage {
 	public String UID = null, NICK_NAME = null, LAST_POST = null;
-	public int FOLLOWS = 0, FANS = 0, BLOGS = 0;
-	public boolean VERIFIED = false;
+	public int FOLLOWS = 0, FANS = 0, BLOGS = 0, VERIFIED = 0;
 
 	@Override
 	public String toString() {

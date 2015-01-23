@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.json.JSONException;
 import common.Out;
@@ -14,29 +13,8 @@ public class CrawlUserIndexPage {
 			throws SQLException, JSONException, IOException {
 		final MySQLDataBase mysql = new MySQLDataBase();
 		List<String> uids = mysql.getIndexPageNotCrawledUIDs();
-		Map<String, WeiboAccount> accs = mysql.getAvailableWeiboAccounts();
-		WeiboClient weiboClient = new WeiboClient(accs,new ExceptionHandler(){
-			@Override
-			public void userNotAvailable(String uid) {
-				mysql.setUserNotAvailable(uid);
-			}
-
-			@Override
-			public void verifycodeException(String account) {
-				mysql.setAccountVerifyCodeTime(account);
-			}
-
-			@Override
-			public void freezeException(String account) {
-				mysql.setAccountFreezed(account);
-			}
-
-			@Override
-			public void updateCookie(WeiboAccount account) {
-				mysql.updateAccountCookie(
-						account.UN, account.COOKIES.toString());
-			}
-		});
+		WeiboClient weiboClient = new WeiboClient();
+		weiboClient.setExceptionHandler(mysql);
 		
 		int count = 0;
 		List<UserIndexPage> uips = new ArrayList<UserIndexPage>();

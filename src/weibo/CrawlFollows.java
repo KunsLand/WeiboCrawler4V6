@@ -14,28 +14,8 @@ public class CrawlFollows {
 		final MySQLDataBase mysql = new MySQLDataBase();
 		Map<String, Integer> pairs = mysql.getFollowsUncrawledPairs();
 		Map<String, WeiboAccount> accs = mysql.getBannedWeiboAccounts();
-		WeiboClient weiboClient = new WeiboClient(accs,new ExceptionHandler(){
-			@Override
-			public void userNotAvailable(String uid) {
-				mysql.setUserNotAvailable(uid);
-			}
-
-			@Override
-			public void verifycodeException(String account) {
-				mysql.setAccountVerifyCodeTime(account);
-			}
-
-			@Override
-			public void freezeException(String account) {
-				mysql.setAccountFreezed(account);
-			}
-
-			@Override
-			public void updateCookie(WeiboAccount account) {
-				mysql.updateAccountCookie(
-						account.UN, account.COOKIES.toString());
-			}
-		});
+		WeiboClient weiboClient = new WeiboClient(accs);
+		weiboClient.setExceptionHandler(mysql);
 		for(String uid: pairs.keySet()){
 			List<String> follows = weiboClient.getAllFollows(uid, pairs.get(uid));
 			if(follows == null) continue;

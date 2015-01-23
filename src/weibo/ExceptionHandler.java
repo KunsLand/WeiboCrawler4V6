@@ -9,5 +9,7 @@ public interface ExceptionHandler {
 	public void freezeException(String account);
 	
 	public void updateCookie(WeiboAccount account);
+	
+	public void enterpriseUser(String uid);
 
 }

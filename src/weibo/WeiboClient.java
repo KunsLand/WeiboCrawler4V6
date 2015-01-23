@@ -2,6 +2,7 @@ package weibo;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +27,21 @@ public class WeiboClient {
 	private int count = 0;
 	private ExceptionHandler handler = null;
 	private static int TIMEOUT = 60 * 1000;
+	private boolean VISITOR_MODE = false;
 
-	public WeiboClient(Map<String, WeiboAccount> accounts,
-			ExceptionHandler handler) {
+	public WeiboClient() throws IOException {
+		accounts = getVisitorAccounts();
+		uns = new ArrayList<String>(accounts.keySet());
+		VISITOR_MODE = true;
+	}
+
+	public WeiboClient(Map<String, WeiboAccount> accounts) {
 		this.accounts = accounts;
 		this.uns = new ArrayList<String>(accounts.keySet());
+		VISITOR_MODE = false;
+	}
+
+	public void setExceptionHandler(ExceptionHandler handler) {
 		this.handler = handler;
 	}
 
@@ -110,7 +121,45 @@ public class WeiboClient {
 		return res.cookies();
 	}
 
+	public static Map<String, WeiboAccount> getVisitorAccounts()
+			throws IOException {
+		String url = "http://passport.weibo.com/visitor/visitor?"
+				+ "a=restore&cb=restore_back&from=weibo&_rand=" + Math.random();
+		Map<String, WeiboAccount> accounts = new HashMap<String, WeiboAccount>();
+		String srt = "E.vAfsJqAoJDRuiZJnv%21YEJvmBvXvCvXM46rcCvnEXBvzvGXfCvvvIEQW"
+				+ "bTdH6R-oYW-PpJObvJOz-Ici6UA0BvA77%2AB.vAflW-P9Rc0lR-ykQDvnJqiQ"
+				+ "VbiRVPBtS%21r3JeWQVqbgVdWiMZ4siOzu4DbmKPWFRsApPcM-dOPTiqWwKFu1"
+				+ "KmkaM3SOi49nPZYAP4oHS-bYVdin5PPZNmPbNrnsS4kwRsM14-E%21AeMr";
+		String srf = "" + (System.currentTimeMillis() / 1000);
+		Response res = null;
+		for (int i = 0; i < 100; i++) {
+			res = Jsoup
+					.connect(url)
+					.cookie("tid",
+							"V85+ctzkdifJu9icaeH33fA8lzu/pa6Fb3HxdPrE9LU=__100")
+					.cookie("SRF", srf).cookie("SRT", srt).timeout(TIMEOUT)
+					.execute();
+			Map<String, String> cookie = res.cookies();
+			if (cookie.containsValue("deleted"))
+				break;
+			srf = cookie.get("SRF");
+			srt = cookie.get("SRT");
+			WeiboAccount acc = new WeiboAccount();
+			acc.COOKIES = cookie;
+			acc.UN = "VISITOR-" + i;
+			accounts.put(acc.UN, acc);
+			Out.println(cookie.toString());
+		}
+		Out.println("VALID VISITOR NUM: " + accounts.size());
+		return accounts;
+	}
+
 	public List<String> getAllFollows(String uid, int folNum) {
+		if (VISITOR_MODE) {
+			Out.println("You NEED initialize the WeiboClient instance with a TRUE weibo ACCOUNT!"
+					+ "\nVisitors CANNOT access the user follows pages!");
+			System.exit(0);
+		}
 		Out.println(uid + " => " + folNum);
 		try {
 			Set<String> fol = new HashSet<String>();
@@ -123,11 +172,34 @@ public class WeiboClient {
 					Out.println("No Available Account.");
 					System.exit(0);
 				}
-				Response res = Jsoup.connect(url).cookies(acc.COOKIES)
-						.timeout(TIMEOUT).followRedirects(true).execute();
+				Response res = null;
+				try {
+					res = Jsoup.connect(url).cookies(acc.COOKIES)
+							.timeout(TIMEOUT).followRedirects(true).execute();
+				} catch (IOException e) {
+					Out.println(e.getMessage() + " => ( UID=" + uid + ", PAGE="
+							+ i + " )");
+					i--;
+					continue;
+				}
 				String redirected_url = res.url().toString();
-				if (!redirected_url.startsWith("http://gov.weibo.com")) {
+				if (redirected_url.endsWith("sorry?userblock")) {
+					refreshAccount(acc.UN);
+					i--;
+					continue;
+				} else if (redirected_url.endsWith("10.3.8.211")) {
 					Out.println("REDIRECTED TO => " + redirected_url);
+					Out.println("Your network connection is expired!");
+					System.exit(0);
+				} else if (redirected_url
+						.startsWith("http://login.sina.com.cn/sso/login.php?")){
+					Out.println("REDIRECTED TO => " + redirected_url);
+					refreshAccount(acc.UN);
+					i--;
+					continue;
+				} else if (!redirected_url.startsWith("http://gov.weibo.com")) {
+					Out.println("REDIRECTED TO => " + redirected_url);
+					handler.enterpriseUser(uid);
 					return null;
 				}
 				Document doc = res.parse();
@@ -151,7 +223,8 @@ public class WeiboClient {
 				return null;
 			Elements counters = doc.select("table.tb_counter strong");
 			if (!doc.select("div.page_error").isEmpty()) {
-				handler.userNotAvailable(uid);
+				if (handler != null)
+					handler.userNotAvailable(uid);
 				return null;
 			}
 			if (counters.isEmpty()) {
@@ -175,8 +248,15 @@ public class WeiboClient {
 					+ " div.WB_detail > div[class=WB_from S_txt2] a");
 			uip.LAST_POST = posts.isEmpty() ? null : posts.first()
 					.attr("title");
-			uip.VERIFIED = !doc.select(
-					"div.verify_area a[class~=icon_verify_(co_)?v]").isEmpty();
+			boolean v1 = !doc.select("div.verify_area a[class~=icon_verify_v]")
+					.isEmpty(), v2 = !doc.select(
+					"div.verify_area a[class~=icon_verify_co_v]").isEmpty();
+			if (v1)
+				uip.VERIFIED = 1;
+			else if (v2)
+				uip.VERIFIED = 2;
+			else
+				uip.VERIFIED = 0;
 			Out.println(uip.toString());
 			return uip;
 		} catch (IOException | JSONException e) {
@@ -197,7 +277,8 @@ public class WeiboClient {
 		String redirected_url = res.url().toString();
 		if (redirected_url.contains("http://sass.weibo")
 				|| redirected_url.contains("sorry?userblock")) {
-			handler.freezeException(acc.UN);
+			if (handler != null)
+				handler.freezeException(acc.UN);
 			removeAccount(acc.UN);
 			return null;
 		} else if (redirected_url.contains("/signup/signup.php")
@@ -205,17 +286,23 @@ public class WeiboClient {
 				|| redirected_url.contains("http://passport")) {
 			refreshAccount(acc.UN);
 			return null;
+		} else if (redirected_url.endsWith("10.3.8.211")) {
+			Out.println("REDIRECTED TO => " + redirected_url);
+			Out.println("Your network connection is expired!");
+			System.exit(0);
 		} else if (!doc.select("div.veriyfycode").isEmpty()) {
-			handler.verifycodeException(acc.UN);
+			if (handler != null)
+				handler.verifycodeException(acc.UN);
 			removeAccount(acc.UN);
 			return null;
-		} else if (!doc.select("div#pl_common_unloginbase").isEmpty()) {
+		} else if (!VISITOR_MODE
+				&& !doc.select("div#pl_common_unloginbase").isEmpty()) {
 			refreshAccount(acc.UN);
 		}
 		return doc;
 	}
 
-	public Document getFullHtml(Document doc) throws JSONException {
+	public static Document getFullHtml(Document doc) throws JSONException {
 		Elements scripts = doc.select("script");
 		StringBuilder sb = new StringBuilder(doc.body().toString());
 		for (Element e : scripts) {
@@ -229,20 +316,27 @@ public class WeiboClient {
 		return Jsoup.parse(sb.toString());
 	}
 
-	public synchronized void refreshAccount(String un) throws IOException,
-			JSONException {
+	public void refreshAccount(String un) throws IOException, JSONException {
+		if (VISITOR_MODE) {
+			uns.remove(un);
+			accounts.remove(un);
+			Out.println("NUM OF ACCOUNTS IN USE => " + accounts.size());
+			return;
+		}
 		WeiboAccount acc = accounts.get(un);
-		if(acc==null) return;
+		if (acc == null)
+			return;
 		acc.COOKIES = login(acc.UN, acc.PSWD);
 		acc.LOGIN_COUNTER++;
 		acc.INCOMPLETE_COUNTER = 0;
 		if (acc.COOKIES == null || acc.COOKIES.containsKey("login_sid_t")) {
 			Out.println("ACCOUNT LIMITED => ( UN=" + acc.UN + ", RC="
 					+ acc.REQUEST_COUNTER + ", LC=" + acc.LOGIN_COUNTER + " )");
-			handler.verifycodeException(acc.UN);
+			if (handler != null)
+				handler.verifycodeException(acc.UN);
 			accounts.remove(acc.UN);
 			uns.remove(acc.UN);
-		} else
+		} else if (handler != null)
 			handler.updateCookie(acc);
 		Out.println("NUM OF ACCOUNTS IN USE => " + accounts.size());
 	}
@@ -251,12 +345,15 @@ public class WeiboClient {
 			JSONException {
 		WeiboAccount acc = null;
 		do {
-			if (accounts.size() == 0)
-				break;
+			if (accounts.size() == 0) {
+				if (!VISITOR_MODE)
+					break;
+				accounts = getVisitorAccounts();
+				uns = new ArrayList<String>(accounts.keySet());
+			}
 			if (count >= accounts.size())
 				count = 0;
 			String account = uns.get(count++);
-			// Out.println(count + " / " + uns.size() + " => " + account);
 			acc = accounts.get(account);
 			if (acc.COOKIES == null)
 				refreshAccount(account);
@@ -264,8 +361,8 @@ public class WeiboClient {
 		} while (acc.COOKIES == null);
 		return acc;
 	}
-	
-	public synchronized void removeAccount(String un){
+
+	public void removeAccount(String un) {
 		accounts.remove(un);
 		uns.remove(un);
 	}
