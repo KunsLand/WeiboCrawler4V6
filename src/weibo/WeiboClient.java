@@ -19,6 +19,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import common.Out;
+import common.TimeUtils;
 
 public class WeiboClient {
 
@@ -47,6 +48,14 @@ public class WeiboClient {
 
 	public static void setTimeout(int seconds) {
 		TIMEOUT = seconds * 1000;
+	}
+	
+	public static void setProxy(String ip, String port){
+		System.getProperties().setProperty("proxySet", "ture");
+		System.setProperty("http.proxyHost", ip);
+		System.setProperty("http.proxyPort", port);
+		System.setProperty("https.proxyHost", ip);
+		System.setProperty("https.proxyPort", port);
 	}
 
 	public static Map<String, String> login(String account, String password)
@@ -179,6 +188,7 @@ public class WeiboClient {
 				} catch (IOException e) {
 					Out.println(e.getMessage() + " => ( UID=" + uid + ", PAGE="
 							+ i + " )");
+					TimeUtils.PauseOneMinute();
 					i--;
 					continue;
 				}
@@ -261,6 +271,7 @@ public class WeiboClient {
 			return uip;
 		} catch (IOException | JSONException e) {
 			Out.println(e.getMessage() + " => " + uid);
+			TimeUtils.PauseOneMinute();
 		}
 		return null;
 	}
