@@ -19,7 +19,6 @@ public class Test {
 		String url = "http://gov.weibo.com/attention/attsList.php?"
 				+ "action=1&uid=1834627797&page=1";
 		Map<String, WeiboAccount> accounts = WeiboClient.getVisitorAccounts();
-		WeiboClient.setProxy("localhost", "1080");
 		List<String> uns = new ArrayList<String>(accounts.keySet());
 		Response res = Jsoup.connect(url)
 				.cookies(accounts.get(uns.get(0)).COOKIES).execute();
