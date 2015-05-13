@@ -7,15 +7,16 @@ import java.util.List;
 
 import org.json.JSONException;
 
+import weibo.database.UserDB;
 import common.Out;
 
 public class CrawlUserIndexPage {
 	public static void main(String[] args)
 			throws SQLException, JSONException, IOException {
-		final MySQLDataBase mysql = new MySQLDataBase();
+		final UserDB mysql = new UserDB();
 		List<String> uids = mysql.getIndexPageNotCrawledUIDs();
 		WeiboClient weiboClient = new WeiboClient();
-		weiboClient.setExceptionHandler(mysql);
+		weiboClient.setUserExceptionHandler(mysql);
 		
 		int count = 0;
 		List<UserIndexPage> uips = new ArrayList<UserIndexPage>();

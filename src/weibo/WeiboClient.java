@@ -18,6 +18,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import weibo.interfaces.AccountExceptionHandler;
+import weibo.interfaces.UserExceptionHandler;
 import common.Out;
 import common.TimeUtils;
 
@@ -26,7 +28,8 @@ public class WeiboClient {
 	private Map<String, WeiboAccount> accounts = null;
 	private List<String> uns = null;
 	private int count = 0;
-	private ExceptionHandler handler = null;
+	private AccountExceptionHandler accHandler = null;
+	private UserExceptionHandler userHandler = null;
 	private static int TIMEOUT = 60 * 1000;
 	private boolean VISITOR_MODE = false;
 
@@ -42,15 +45,19 @@ public class WeiboClient {
 		VISITOR_MODE = false;
 	}
 
-	public void setExceptionHandler(ExceptionHandler handler) {
-		this.handler = handler;
+	public void setAccountExceptionHandler(AccountExceptionHandler handler) {
+		this.accHandler = handler;
+	}
+
+	public void setUserExceptionHandler(UserExceptionHandler handler) {
+		this.userHandler = handler;
 	}
 
 	public static void setTimeout(int seconds) {
 		TIMEOUT = seconds * 1000;
 	}
-	
-	public static void setProxy(String ip, String port){
+
+	public static void setProxy(String ip, String port) {
 		System.getProperties().setProperty("proxySet", "ture");
 		System.setProperty("http.proxyHost", ip);
 		System.setProperty("http.proxyPort", port);
@@ -202,14 +209,15 @@ public class WeiboClient {
 					Out.println("Your network connection is expired!");
 					System.exit(0);
 				} else if (redirected_url
-						.startsWith("http://login.sina.com.cn/sso/login.php?")){
+						.startsWith("http://login.sina.com.cn/sso/login.php?")) {
 					Out.println("REDIRECTED TO => " + redirected_url);
 					refreshAccount(acc.UN);
 					i--;
 					continue;
 				} else if (!redirected_url.startsWith("http://gov.weibo.com")) {
 					Out.println("REDIRECTED TO => " + redirected_url);
-					handler.enterpriseUser(uid);
+					if (userHandler != null)
+						userHandler.enterpriseUser(uid);
 					return null;
 				}
 				Document doc = res.parse();
@@ -233,8 +241,8 @@ public class WeiboClient {
 				return null;
 			Elements counters = doc.select("table.tb_counter strong");
 			if (!doc.select("div.page_error").isEmpty()) {
-				if (handler != null)
-					handler.userNotAvailable(uid);
+				if (userHandler != null)
+					userHandler.userNotAvailable(uid);
 				return null;
 			}
 			if (counters.isEmpty()) {
@@ -288,8 +296,8 @@ public class WeiboClient {
 		String redirected_url = res.url().toString();
 		if (redirected_url.contains("http://sass.weibo")
 				|| redirected_url.contains("sorry?userblock")) {
-			if (handler != null)
-				handler.freezeException(acc.UN);
+			if (accHandler != null)
+				accHandler.freezeException(acc.UN);
 			removeAccount(acc.UN);
 			return null;
 		} else if (redirected_url.contains("/signup/signup.php")
@@ -302,8 +310,8 @@ public class WeiboClient {
 			Out.println("Your network connection is expired!");
 			System.exit(0);
 		} else if (!doc.select("div.veriyfycode").isEmpty()) {
-			if (handler != null)
-				handler.verifycodeException(acc.UN);
+			if (accHandler != null)
+				accHandler.verifycodeException(acc.UN);
 			removeAccount(acc.UN);
 			return null;
 		} else if (!VISITOR_MODE
@@ -343,12 +351,12 @@ public class WeiboClient {
 		if (acc.COOKIES == null || acc.COOKIES.containsKey("login_sid_t")) {
 			Out.println("ACCOUNT LIMITED => ( UN=" + acc.UN + ", RC="
 					+ acc.REQUEST_COUNTER + ", LC=" + acc.LOGIN_COUNTER + " )");
-			if (handler != null)
-				handler.verifycodeException(acc.UN);
+			if (accHandler != null)
+				accHandler.verifycodeException(acc.UN);
 			accounts.remove(acc.UN);
 			uns.remove(acc.UN);
-		} else if (handler != null)
-			handler.updateCookie(acc);
+		} else if (accHandler != null)
+			accHandler.updateCookie(acc);
 		Out.println("NUM OF ACCOUNTS IN USE => " + accounts.size());
 	}
 
