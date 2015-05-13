@@ -7,8 +7,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import weibo.WeiboAccount;
 import weibo.interfaces.AccountExceptionHandler;
+import weibo.objects.WeiboAccount;
 import common.Out;
 import common.TimeUtils;
 

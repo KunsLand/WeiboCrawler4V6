@@ -7,8 +7,10 @@ import java.util.Map;
 
 import org.json.JSONException;
 
+import weibo.client.WeiboClient4Follows;
 import weibo.database.AccountDB;
 import weibo.database.UserRelationDB;
+import weibo.objects.WeiboAccount;
 import common.Out;
 
 public class CrawlFollows {
@@ -19,7 +21,7 @@ public class CrawlFollows {
 		AccountDB accDB = new AccountDB();
 		Map<String, Integer> pairs = mysql.getFollowsUncrawledPairs();
 		Map<String, WeiboAccount> accs = accDB.getBannedWeiboAccounts();
-		WeiboClient weiboClient = new WeiboClient(accs);
+		WeiboClient4Follows weiboClient = new WeiboClient4Follows(accs);
 		weiboClient.setAccountExceptionHandler(accDB);
 		for(String uid: pairs.keySet()){
 			List<String> follows = weiboClient.getAllFollows(uid, pairs.get(uid));

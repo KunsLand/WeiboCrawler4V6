@@ -1,4 +1,4 @@
-package weibo;
+package weibo.client;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;

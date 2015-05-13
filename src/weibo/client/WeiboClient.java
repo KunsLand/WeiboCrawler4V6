@@ -1,12 +1,10 @@
-package weibo;
+package weibo.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.codec.binary.Base64;
 import org.json.JSONException;
@@ -20,18 +18,18 @@ import org.jsoup.select.Elements;
 
 import weibo.interfaces.AccountExceptionHandler;
 import weibo.interfaces.UserExceptionHandler;
+import weibo.objects.WeiboAccount;
 import common.Out;
-import common.TimeUtils;
 
 public class WeiboClient {
 
-	private Map<String, WeiboAccount> accounts = null;
-	private List<String> uns = null;
-	private int count = 0;
-	private AccountExceptionHandler accHandler = null;
-	private UserExceptionHandler userHandler = null;
-	private static int TIMEOUT = 60 * 1000;
-	private boolean VISITOR_MODE = false;
+	protected Map<String, WeiboAccount> accounts = null;
+	protected List<String> uns = null;
+	protected int count = 0;
+	protected AccountExceptionHandler accHandler = null;
+	protected UserExceptionHandler userHandler = null;
+	protected static int TIMEOUT = 60 * 1000;
+	protected boolean VISITOR_MODE = false;
 
 	public WeiboClient() throws IOException {
 		accounts = getVisitorAccounts();
@@ -170,120 +168,6 @@ public class WeiboClient {
 		return accounts;
 	}
 
-	public List<String> getAllFollows(String uid, int folNum) {
-		if (VISITOR_MODE) {
-			Out.println("You NEED initialize the WeiboClient instance with a TRUE weibo ACCOUNT!"
-					+ "\nVisitors CANNOT access the user follows pages!");
-			System.exit(0);
-		}
-		Out.println(uid + " => " + folNum);
-		try {
-			Set<String> fol = new HashSet<String>();
-			int pages = folNum / 20 + 1;
-			for (int i = 1; i <= pages; i++) {
-				String url = "http://gov.weibo.com/attention/attsList.php"
-						+ "?action=1&uid=" + uid + "&page=" + i;
-				WeiboAccount acc = getAccount();
-				if (acc.COOKIES == null) {
-					Out.println("No Available Account.");
-					System.exit(0);
-				}
-				Response res = null;
-				try {
-					res = Jsoup.connect(url).cookies(acc.COOKIES)
-							.timeout(TIMEOUT).followRedirects(true).execute();
-				} catch (IOException e) {
-					Out.println(e.getMessage() + " => ( UID=" + uid + ", PAGE="
-							+ i + " )");
-					TimeUtils.PauseOneMinute();
-					i--;
-					continue;
-				}
-				String redirected_url = res.url().toString();
-				if (redirected_url.endsWith("sorry?userblock")) {
-					refreshAccount(acc.UN);
-					i--;
-					continue;
-				} else if (redirected_url.endsWith("10.3.8.211")) {
-					Out.println("REDIRECTED TO => " + redirected_url);
-					Out.println("Your network connection is expired!");
-					System.exit(0);
-				} else if (redirected_url
-						.startsWith("http://login.sina.com.cn/sso/login.php?")) {
-					Out.println("REDIRECTED TO => " + redirected_url);
-					refreshAccount(acc.UN);
-					i--;
-					continue;
-				} else if (!redirected_url.startsWith("http://gov.weibo.com")) {
-					Out.println("REDIRECTED TO => " + redirected_url);
-					if (userHandler != null)
-						userHandler.enterpriseUser(uid);
-					return null;
-				}
-				Document doc = res.parse();
-				Elements el = doc.select("a[namecard=true]");
-				for (Element e : el)
-					fol.add(e.attr("uid"));
-			}
-			return new ArrayList<String>(fol);
-		} catch (IOException | JSONException e) {
-			Out.println(e.getMessage() + " => " + uid);
-		}
-		return null;
-	}
-
-	public UserIndexPage getUserIndexPage(String uid) {
-		try {
-			String url = "http://www.weibo.com/u/" + uid;
-			WeiboAccount acc = getAccount();
-			Document doc = getHtmlDocument(acc, url);
-			if (doc == null)
-				return null;
-			Elements counters = doc.select("table.tb_counter strong");
-			if (!doc.select("div.page_error").isEmpty()) {
-				if (userHandler != null)
-					userHandler.userNotAvailable(uid);
-				return null;
-			}
-			if (counters.isEmpty()) {
-				Out.println(uid + " => Incomplete index page.");
-				acc.INCOMPLETE_COUNTER++;
-				if (acc.INCOMPLETE_COUNTER > 5) {
-					refreshAccount(acc.UN);
-				}
-				return null;
-			}
-			if (acc.INCOMPLETE_COUNTER > 0)
-				acc.INCOMPLETE_COUNTER--;
-			UserIndexPage uip = new UserIndexPage();
-			uip.UID = uid;
-			uip.FOLLOWS = Integer.valueOf(counters.get(0).ownText());
-			uip.FANS = Integer.valueOf(counters.get(1).ownText());
-			uip.BLOGS = Integer.valueOf(counters.get(2).ownText());
-			uip.NICK_NAME = doc.select("span.username").text();
-			Elements posts = doc.select("div[action-type="
-					+ "feed_list_item]:not([feedtype=top])"
-					+ " div.WB_detail > div[class=WB_from S_txt2] a");
-			uip.LAST_POST = posts.isEmpty() ? null : posts.first()
-					.attr("title");
-			boolean v1 = !doc.select("div.verify_area a[class~=icon_verify_v]")
-					.isEmpty(), v2 = !doc.select(
-					"div.verify_area a[class~=icon_verify_co_v]").isEmpty();
-			if (v1)
-				uip.VERIFIED = 1;
-			else if (v2)
-				uip.VERIFIED = 2;
-			else
-				uip.VERIFIED = 0;
-			Out.println(uip.toString());
-			return uip;
-		} catch (IOException | JSONException e) {
-			Out.println(e.getMessage() + " => " + uid);
-			TimeUtils.PauseOneMinute();
-		}
-		return null;
-	}
-
 	public Document getHtmlDocument(WeiboAccount acc, String url)
 			throws IOException, JSONException {
 		if (acc == null) {
@@ -333,6 +217,49 @@ public class WeiboClient {
 			sb.append(obj.get("html"));
 		}
 		return Jsoup.parse(sb.toString());
+	}
+
+	public Document getAjaxHtml(WeiboAccount acc, String url)
+			throws IOException, JSONException {
+		if (acc == null) {
+			Out.println("No available account for crawling.");
+			System.exit(0);
+		}
+		if(acc.COOKIES==null) {
+			removeAccount(acc.UN);
+			return null;
+		}
+		Response res = Jsoup.connect(url).cookies(acc.COOKIES).timeout(TIMEOUT)
+				.ignoreContentType(true).followRedirects(true).execute();
+		String redirected_url = res.url().toString();
+		if (redirected_url.contains("http://sass.weibo")
+				|| redirected_url.contains("sorry?userblock")) {
+			if (accHandler != null)
+				accHandler.freezeException(acc.UN);
+			removeAccount(acc.UN);
+			return null;
+		} else if (redirected_url.contains("/signup/signup.php")
+				|| redirected_url.contains("login.php")
+				|| redirected_url.contains("http://passport")) {
+			refreshAccount(acc.UN);
+			return null;
+		} else if (redirected_url.endsWith("10.3.8.211")) {
+			Out.println("REDIRECTED TO => " + redirected_url);
+			Out.println("Your network connection is expired!");
+			System.exit(0);
+		} else if (res.body().contains("div.veriyfycode")) {
+			if (accHandler != null)
+				accHandler.verifycodeException(acc.UN);
+			removeAccount(acc.UN);
+			return null;
+		}
+		if(!res.body().startsWith("{")){
+			Out.println(res.body());
+			Out.println(res.url().toString());
+			System.exit(0);
+		}
+		JSONObject obj = new JSONObject(res.body()).getJSONObject("data");
+		return Jsoup.parse(obj.getString("html"));
 	}
 
 	public void refreshAccount(String un) throws IOException, JSONException {

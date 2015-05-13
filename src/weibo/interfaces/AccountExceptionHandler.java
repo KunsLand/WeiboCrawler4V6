@@ -1,6 +1,6 @@
 package weibo.interfaces;
 
-import weibo.WeiboAccount;
+import weibo.objects.WeiboAccount;
 
 public interface AccountExceptionHandler {
 	

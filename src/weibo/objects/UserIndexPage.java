@@ -1,4 +1,4 @@
-package weibo;
+package weibo.objects;
 
 public class UserIndexPage {
 	public String UID = null, NICK_NAME = null, LAST_POST = null;

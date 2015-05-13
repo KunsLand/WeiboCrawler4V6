@@ -10,8 +10,8 @@ import org.jsoup.Connection.Response;
 import org.jsoup.Jsoup;
 
 import common.Out;
-import weibo.WeiboAccount;
-import weibo.WeiboClient;
+import weibo.client.WeiboClient;
+import weibo.objects.WeiboAccount;
 
 public class Test {
 

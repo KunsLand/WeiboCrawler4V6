@@ -7,7 +7,9 @@ import java.util.List;
 
 import org.json.JSONException;
 
+import weibo.client.WeiboClient4User;
 import weibo.database.UserDB;
+import weibo.objects.UserIndexPage;
 import common.Out;
 
 public class CrawlUserIndexPage {
@@ -15,7 +17,7 @@ public class CrawlUserIndexPage {
 			throws SQLException, JSONException, IOException {
 		final UserDB mysql = new UserDB();
 		List<String> uids = mysql.getIndexPageNotCrawledUIDs();
-		WeiboClient weiboClient = new WeiboClient();
+		WeiboClient4User weiboClient = new WeiboClient4User();
 		weiboClient.setUserExceptionHandler(mysql);
 		
 		int count = 0;

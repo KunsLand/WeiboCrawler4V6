@@ -1,4 +1,4 @@
-package weibo;
+package weibo.objects;
 
 import java.util.Map;
 

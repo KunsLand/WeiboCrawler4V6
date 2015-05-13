@@ -24,6 +24,7 @@ public class UserRelationDB extends UserDB {
 		conn.setAutoCommit(false);
 		for (String u : follows) {
 			ps.setString(1, u);
+			ps.setString(2, uid);
 			ps.addBatch();
 		}
 		if (follows.size() > 0) {

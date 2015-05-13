@@ -9,8 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import weibo.UserIndexPage;
 import weibo.interfaces.UserExceptionHandler;
+import weibo.objects.UserIndexPage;
 import common.Out;
 
 public class UserDB extends MySQLDB implements UserExceptionHandler{
