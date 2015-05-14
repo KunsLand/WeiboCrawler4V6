@@ -186,7 +186,8 @@ public class WeiboClient {
 			return null;
 		} else if (redirected_url.contains("/signup/signup.php")
 				|| redirected_url.contains("login.php")
-				|| redirected_url.contains("http://passport")) {
+				|| redirected_url.contains("http://passport")
+				|| redirected_url.contains("http://login.sina.com.cn")) {
 			refreshAccount(acc.UN);
 			return null;
 		} else if (redirected_url.endsWith("10.3.8.211")) {
@@ -240,7 +241,8 @@ public class WeiboClient {
 			return null;
 		} else if (redirected_url.contains("/signup/signup.php")
 				|| redirected_url.contains("login.php")
-				|| redirected_url.contains("http://passport")) {
+				|| redirected_url.contains("http://passport")
+				|| redirected_url.contains("http://login.sina.com.cn")) {
 			refreshAccount(acc.UN);
 			return null;
 		} else if (redirected_url.endsWith("10.3.8.211")) {
