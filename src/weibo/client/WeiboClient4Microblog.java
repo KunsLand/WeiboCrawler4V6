@@ -39,7 +39,7 @@ public class WeiboClient4Microblog extends WeiboClient {
 				}
 			} while (doc == null && count < 5);
 			if (doc == null)
-				return mids;
+				return null;
 			Elements lists = doc.select("div[action-type=feed_list_item]");
 			for (Element item : lists) {
 				mids.add(item.attr("mid"));
