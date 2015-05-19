@@ -62,7 +62,7 @@ public class AccountDB extends MySQLDB implements AccountExceptionHandler {
 		return accs;
 	}
 
-	public Map<String, WeiboAccount> getFirstAvailableWeiboAccount()
+	public Map<String, WeiboAccount> getAvailableWeiboAccounts(int n)
 			throws SQLException {
 		Map<String, WeiboAccount> accs = new HashMap<String, WeiboAccount>();
 		Statement stmt = conn.createStatement();
@@ -71,7 +71,7 @@ public class AccountDB extends MySQLDB implements AccountExceptionHandler {
 		String sql = "select account, password, cookie from account"
 				+ " where banned=false and freeze=false and ("
 				+ "verifycode_time is null or verifycode_time <= '"
-				+ verifycode_time + "') limit 1";
+				+ verifycode_time + "') limit " + n;
 		ResultSet result = stmt.executeQuery(sql);
 		while (result.next()) {
 			WeiboAccount acc = new WeiboAccount();
@@ -121,7 +121,6 @@ public class AccountDB extends MySQLDB implements AccountExceptionHandler {
 			Out.println(e.getMessage() + " => " + account);
 		}
 	}
-
 
 	@Override
 	public void verifycodeException(String account) {

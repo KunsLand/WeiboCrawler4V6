@@ -264,7 +264,7 @@ public class WeiboClient {
 		return Jsoup.parse(obj.getString("html"));
 	}
 
-	public void refreshAccount(String un) throws IOException, JSONException {
+	public synchronized void refreshAccount(String un) throws IOException, JSONException {
 		if (VISITOR_MODE) {
 			uns.remove(un);
 			accounts.remove(un);
@@ -310,7 +310,7 @@ public class WeiboClient {
 		return acc;
 	}
 
-	public void removeAccount(String un) {
+	public synchronized void removeAccount(String un) {
 		accounts.remove(un);
 		uns.remove(un);
 	}
