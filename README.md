@@ -2,7 +2,9 @@ This project is a [Sina Weibo] web crawler which provides two main functions: cr
 
 # Recommended Java Version
 [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+
 [What's new in JDK 8](http://www.oracle.com/technetwork/java/javase/8-whats-new-2157071.html)
+
 [Java 8 的新特性和改进总览](http://www.oschina.net/translate/everything-about-java-8)
 
 # NOTICE
