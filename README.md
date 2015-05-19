@@ -1,5 +1,10 @@
 This project is a [Sina Weibo] web crawler which provides two main functions: crawl user index page information and user follows based on known user ids.
 
+# Recommended Java Version
+[JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+[What's new in JDK 8](http://www.oracle.com/technetwork/java/javase/8-whats-new-2157071.html)
+[Java 8 的新特性和改进总览](http://www.oschina.net/translate/everything-about-java-8)
+
 # NOTICE
 This project is just a toy web crawling program. It does not leak any personal information of users involved in the Sina Weibo. Neither does it provide a way to hack the website server. It is, technically, a program which follows strictly the HTTP rules and implemented with Jsoup API. Any request sent by the program can be visited and viewed mannualy through any normal browser.
 
