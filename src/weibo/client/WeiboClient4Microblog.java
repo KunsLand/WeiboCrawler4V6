@@ -12,6 +12,7 @@ import org.jsoup.select.Elements;
 
 import common.Out;
 import common.TimeUtils;
+import weibo.interfaces.GlobalConfig;
 //import common.TimeUtils;
 import weibo.objects.WeiboAccount;
 
@@ -34,10 +35,10 @@ public class WeiboClient4Microblog extends WeiboClient {
 				try {
 					acc = getAccount();
 					doc = getAjaxHtml(acc, url);
-					Thread.sleep(5000);
-				} catch (IOException | JSONException | InterruptedException e) {
+					TimeUtils.Pause(GlobalConfig.TIME_REQUEST_GAP);
+				} catch (IOException | JSONException e) {
 					Out.println(e.getMessage());
-					TimeUtils.Pause(5);
+					TimeUtils.Pause(GlobalConfig.TIME_REQUEST_ERORR);
 				}
 			} while (doc == null && count < 5);
 			if (doc == null)

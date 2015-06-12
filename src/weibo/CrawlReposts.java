@@ -12,6 +12,7 @@ import common.TimeUtils;
 import weibo.client.WeiboClient4Microblog;
 import weibo.database.AccountDB;
 import weibo.database.MicroblogDB;
+import weibo.interfaces.GlobalConfig;
 import weibo.objects.WeiboAccount;
 
 public class CrawlReposts {
@@ -26,17 +27,22 @@ public class CrawlReposts {
 		weiboClient.setMicroblogExceptionHandler(mdb);
 
 		ExecutorService es = Executors.newFixedThreadPool(10);
+		int count = 0;
 		for (String mid : mids) {
+			int n = ++count;
 			es.execute(new Runnable() {
 				@Override
 				public void run() {
 					try {
 						mdb.updateMicroblogRelations(mid,
 								weiboClient.getRepostMids(mid));
-						Thread.sleep(5*1000);
-					} catch (SQLException | InterruptedException e) {
+						TimeUtils.Pause(GlobalConfig.TIME_REQUEST_GAP);
+					} catch (SQLException e) {
 						Out.println(e.getMessage());
-						TimeUtils.Pause(5);
+						TimeUtils.Pause(GlobalConfig.TIME_REQUEST_ERORR);
+					}
+					if (n % 100 == 0) {
+						Out.println(n + "/" + mids.size());
 					}
 				}
 			});

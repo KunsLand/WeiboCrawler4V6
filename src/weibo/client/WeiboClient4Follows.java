@@ -14,6 +14,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import weibo.interfaces.GlobalConfig;
 import weibo.objects.WeiboAccount;
 import common.Out;
 import common.TimeUtils;
@@ -39,11 +40,11 @@ public class WeiboClient4Follows extends WeiboClient {
 				Response res = null;
 				try {
 					res = Jsoup.connect(url).cookies(acc.COOKIES)
-							.timeout(TIMEOUT).followRedirects(true).execute();
+							.timeout(GlobalConfig.TIME_REQUEST_OUT).followRedirects(true).execute();
 				} catch (IOException e) {
 					Out.println(e.getMessage() + " => ( UID=" + uid + ", PAGE="
 							+ i + " )");
-					TimeUtils.PauseOneMinute();
+					TimeUtils.Pause(GlobalConfig.TIME_REQUEST_ERORR);
 					i--;
 					continue;
 				}

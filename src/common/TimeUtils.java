@@ -21,7 +21,7 @@ public class TimeUtils {
 	private static String format(SimpleDateFormat sdf, Date date) {
 		return sdf.format(date);
 	}
-	
+
 	public static String format(Date date) {
 		return format(TIME_CHN, date);
 	}
@@ -52,12 +52,14 @@ public class TimeUtils {
 		}
 	}
 
-	public static void Pause(int minutes) {
-		if (minutes <= 0)
+	public static void Pause(int seconds) {
+		if (seconds <= 0)
 			return;
 		try {
-			Out.println("WATING for " + minutes + " minute(s)...");
-			Thread.sleep(minutes * 60 * 1000);
+			if (seconds >= 60) {
+				Out.println("WATING for " + seconds + " second(s)...");
+			}
+			Thread.sleep(seconds * 1000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

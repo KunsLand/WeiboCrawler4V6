@@ -6,6 +6,7 @@ import org.json.JSONException;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
+import weibo.interfaces.GlobalConfig;
 import weibo.objects.UserIndexPage;
 import weibo.objects.WeiboAccount;
 import common.Out;
@@ -64,7 +65,7 @@ public class WeiboClient4User extends WeiboClient{
 			return uip;
 		} catch (IOException | JSONException e) {
 			Out.println(e.getMessage() + " => " + uid);
-			TimeUtils.PauseOneMinute();
+			TimeUtils.Pause(GlobalConfig.TIME_REQUEST_ERORR);
 		}
 		return null;
 	}

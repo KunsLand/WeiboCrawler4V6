@@ -17,10 +17,12 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import weibo.interfaces.AccountExceptionHandler;
+import weibo.interfaces.GlobalConfig;
 import weibo.interfaces.MicroblogExceptionHandler;
 import weibo.interfaces.UserExceptionHandler;
 import weibo.objects.WeiboAccount;
 import common.Out;
+import common.TimeUtils;
 
 public class WeiboClient {
 
@@ -30,7 +32,6 @@ public class WeiboClient {
 	protected AccountExceptionHandler accHandler = null;
 	protected UserExceptionHandler userHandler = null;
 	protected MicroblogExceptionHandler mblgHandler = null;
-	protected static int TIMEOUT = 60 * 1000;
 	protected boolean VISITOR_MODE = false;
 	private int DEFAULT_VISITOR_NUM = 100;
 
@@ -53,13 +54,9 @@ public class WeiboClient {
 	public void setUserExceptionHandler(UserExceptionHandler handler) {
 		this.userHandler = handler;
 	}
-	
-	public void setMicroblogExceptionHandler(MicroblogExceptionHandler handler){
-		this.mblgHandler = handler;
-	}
 
-	public static void setTimeout(int seconds) {
-		TIMEOUT = seconds * 1000;
+	public void setMicroblogExceptionHandler(MicroblogExceptionHandler handler) {
+		this.mblgHandler = handler;
 	}
 
 	public static void setProxy(String ip, String port) {
@@ -81,8 +78,9 @@ public class WeiboClient {
 				/ 1000;
 		String login_url = "http://login.sina.com.cn/sso/login.php?"
 				+ "client=ssologin.js(" + client_js_version + ")";
-		Response res = Jsoup.connect(prelogin_url).timeout(TIMEOUT)
-				.ignoreContentType(true).execute();
+		Response res = Jsoup.connect(prelogin_url)
+				.timeout(GlobalConfig.TIME_REQUEST_OUT).ignoreContentType(true)
+				.execute();
 
 		String php = res.body();
 		php = php.substring(php.indexOf("(") + 1, php.indexOf(")"));
@@ -101,7 +99,7 @@ public class WeiboClient {
 
 		res = Jsoup
 				.connect(login_url)
-				.timeout(TIMEOUT)
+				.timeout(GlobalConfig.TIME_REQUEST_OUT)
 				.data("entry", "weibo")
 				.data("gateway", "1")
 				.data("from", "")
@@ -126,8 +124,9 @@ public class WeiboClient {
 
 		// Out.println(res.body());
 
-		res = Jsoup.connect("http://weibo.com/login.php").timeout(TIMEOUT)
-				.cookies(res.cookies()).followRedirects(true).execute();
+		res = Jsoup.connect("http://weibo.com/login.php")
+				.timeout(GlobalConfig.TIME_REQUEST_OUT).cookies(res.cookies())
+				.followRedirects(true).execute();
 
 		// Out.println(res.body());
 
@@ -137,7 +136,8 @@ public class WeiboClient {
 		String redirect_url = els.first().attr("content");
 		redirect_url = redirect_url.substring(8, redirect_url.length() - 1);
 		res = Jsoup.connect(redirect_url).cookies(res.cookies())
-				.timeout(TIMEOUT).followRedirects(true).execute();
+				.timeout(GlobalConfig.TIME_REQUEST_OUT).followRedirects(true)
+				.execute();
 		Out.println(res.cookies().toString());
 		return res.cookies();
 	}
@@ -151,6 +151,7 @@ public class WeiboClient {
 			acc.UN = "VISITOR-" + i;
 			accounts.put(acc.UN, acc);
 			Out.println(acc.COOKIES.toString());
+			TimeUtils.Pause(GlobalConfig.TIME_REQUEST_GAP);
 		}
 		Out.println("VALID VISITOR NUM: " + accounts.size());
 		return accounts;
@@ -179,8 +180,9 @@ public class WeiboClient {
 			Out.println("No available account for crawling.");
 			System.exit(0);
 		}
-		Response res = Jsoup.connect(url).cookies(acc.COOKIES).timeout(TIMEOUT)
-				.followRedirects(true).execute();
+		Response res = Jsoup.connect(url).cookies(acc.COOKIES)
+				.timeout(GlobalConfig.TIME_REQUEST_OUT).followRedirects(true)
+				.execute();
 		Document doc = getFullHtml(res.parse());
 		String redirected_url = res.url().toString();
 		if (redirected_url.contains("http://sass.weibo")
@@ -231,20 +233,20 @@ public class WeiboClient {
 			Out.println("No available account for crawling.");
 			System.exit(0);
 		}
-		if(acc.COOKIES==null) {
+		if (acc.COOKIES == null) {
 			removeAccount(acc.UN);
 			return null;
 		}
-		Response res = Jsoup.connect(url).cookies(acc.COOKIES).timeout(TIMEOUT)
-				.ignoreContentType(true).followRedirects(true).execute();
+		Response res = Jsoup.connect(url).cookies(acc.COOKIES)
+				.timeout(GlobalConfig.TIME_REQUEST_OUT).ignoreContentType(true)
+				.followRedirects(true).execute();
 		String redirected_url = res.url().toString();
-		if(redirected_url.contains("sorry?pagenotfound")){
-			if(mblgHandler!=null){
+		if (redirected_url.contains("sorry?pagenotfound")) {
+			if (mblgHandler != null) {
 				mblgHandler.pageNotFound(url);
 			}
 			return null;
-		}
-		else if (redirected_url.contains("http://sass.weibo")
+		} else if (redirected_url.contains("http://sass.weibo")
 				|| redirected_url.contains("sorry?userblock")) {
 			if (accHandler != null)
 				accHandler.freezeException(acc.UN);
@@ -266,19 +268,20 @@ public class WeiboClient {
 			removeAccount(acc.UN);
 			return null;
 		}
-		if(!res.body().startsWith("{")){
+		if (!res.body().startsWith("{")) {
 			Out.println(res.body());
 			Out.println(res.url().toString());
 			System.exit(0);
 		}
 		JSONObject obj = new JSONObject(res.body()).getJSONObject("data");
-		if(obj.get("count").toString().equals("null") && mblgHandler!=null){
+		if (obj.get("count").toString().equals("null") && mblgHandler != null) {
 			mblgHandler.pageNotFound(url);
 		}
 		return Jsoup.parse(obj.getString("html"));
 	}
 
-	public synchronized void refreshAccount(String un) throws IOException, JSONException {
+	public synchronized void refreshAccount(String un) throws IOException,
+			JSONException {
 		if (VISITOR_MODE) {
 			uns.remove(un);
 			accounts.remove(un);

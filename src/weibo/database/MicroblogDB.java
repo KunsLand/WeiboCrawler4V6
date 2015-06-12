@@ -93,7 +93,7 @@ public class MicroblogDB extends MySQLDB implements MicroblogExceptionHandler {
 			sql = "update repostcrawled set pnf=1 where mid=" + mid;
 		} else {
 			Out.println("Page not found: " + url);
-			sql = "update repostcrawled set pnf=1 where url=" + url;
+			sql = "update repostcrawled set pnf=1 where url='" + url+"'";
 		}
 		Statement stmt;
 		try {
