@@ -12,6 +12,7 @@ import org.jsoup.select.Elements;
 
 import common.Out;
 import common.TimeUtils;
+//import common.TimeUtils;
 import weibo.objects.WeiboAccount;
 
 public class WeiboClient4Microblog extends WeiboClient {
@@ -26,16 +27,17 @@ public class WeiboClient4Microblog extends WeiboClient {
 		WeiboAccount acc = null;
 		Document doc = null;
 		String url = "http://weibo.com/aj/v6/mblog/info/big?ajwvr=6&id=" + mid
-				+ "&page=1";
+				+ "&page=1&__rnd="+System.currentTimeMillis();
 		while (true) {
 			int count = 0;
 			do {
 				try {
 					acc = getAccount();
 					doc = getAjaxHtml(acc, url);
-				} catch (IOException | JSONException e) {
+					Thread.sleep(5000);
+				} catch (IOException | JSONException | InterruptedException e) {
 					Out.println(e.getMessage());
-					TimeUtils.PauseOneMinute();
+					TimeUtils.Pause(5);
 				}
 			} while (doc == null && count < 5);
 			if (doc == null)

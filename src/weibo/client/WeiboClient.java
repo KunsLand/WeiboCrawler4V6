@@ -17,6 +17,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import weibo.interfaces.AccountExceptionHandler;
+import weibo.interfaces.MicroblogExceptionHandler;
 import weibo.interfaces.UserExceptionHandler;
 import weibo.objects.WeiboAccount;
 import common.Out;
@@ -28,11 +29,13 @@ public class WeiboClient {
 	protected int count = 0;
 	protected AccountExceptionHandler accHandler = null;
 	protected UserExceptionHandler userHandler = null;
+	protected MicroblogExceptionHandler mblgHandler = null;
 	protected static int TIMEOUT = 60 * 1000;
 	protected boolean VISITOR_MODE = false;
+	private int DEFAULT_VISITOR_NUM = 100;
 
-	public WeiboClient() throws IOException {
-		accounts = getVisitorAccounts();
+	public WeiboClient() throws IOException, JSONException {
+		accounts = getVisitorAccounts(DEFAULT_VISITOR_NUM);
 		uns = new ArrayList<String>(accounts.keySet());
 		VISITOR_MODE = true;
 	}
@@ -49,6 +52,10 @@ public class WeiboClient {
 
 	public void setUserExceptionHandler(UserExceptionHandler handler) {
 		this.userHandler = handler;
+	}
+	
+	public void setMicroblogExceptionHandler(MicroblogExceptionHandler handler){
+		this.mblgHandler = handler;
 	}
 
 	public static void setTimeout(int seconds) {
@@ -135,37 +142,35 @@ public class WeiboClient {
 		return res.cookies();
 	}
 
-	public static Map<String, WeiboAccount> getVisitorAccounts()
-			throws IOException {
-		String url = "http://passport.weibo.com/visitor/visitor?"
-				+ "a=restore&cb=restore_back&from=weibo&_rand=" + Math.random();
+	public static Map<String, WeiboAccount> getVisitorAccounts(int n)
+			throws IOException, JSONException {
 		Map<String, WeiboAccount> accounts = new HashMap<String, WeiboAccount>();
-		String srt = "E.vAfsJqAoJDRuiZJnv%21YEJvmBvXvCvXM46rcCvnEXBvzvGXfCvvvIEQW"
-				+ "bTdH6R-oYW-PpJObvJOz-Ici6UA0BvA77%2AB.vAflW-P9Rc0lR-ykQDvnJqiQ"
-				+ "VbiRVPBtS%21r3JeWQVqbgVdWiMZ4siOzu4DbmKPWFRsApPcM-dOPTiqWwKFu1"
-				+ "KmkaM3SOi49nPZYAP4oHS-bYVdin5PPZNmPbNrnsS4kwRsM14-E%21AeMr";
-		String srf = "" + (System.currentTimeMillis() / 1000);
-		Response res = null;
-		for (int i = 0; i < 100; i++) {
-			res = Jsoup
-					.connect(url)
-					.cookie("tid",
-							"V85+ctzkdifJu9icaeH33fA8lzu/pa6Fb3HxdPrE9LU=__100")
-					.cookie("SRF", srf).cookie("SRT", srt).timeout(TIMEOUT)
-					.execute();
-			Map<String, String> cookie = res.cookies();
-			if (cookie.containsValue("deleted"))
-				break;
-			srf = cookie.get("SRF");
-			srt = cookie.get("SRT");
+		for (int i = 0; i < n; i++) {
 			WeiboAccount acc = new WeiboAccount();
-			acc.COOKIES = cookie;
+			acc.COOKIES = getVisitorCookie();
 			acc.UN = "VISITOR-" + i;
 			accounts.put(acc.UN, acc);
-			Out.println(cookie.toString());
+			Out.println(acc.COOKIES.toString());
 		}
 		Out.println("VALID VISITOR NUM: " + accounts.size());
 		return accounts;
+	}
+
+	public static Map<String, String> getVisitorCookie() throws IOException,
+			JSONException {
+		Response res = Jsoup
+				.connect("http://passport.weibo.com/visitor/genvisitor")
+				.data("cb", "gen_callback").ignoreContentType(true)
+				.method(Method.POST).followRedirects(true).execute();
+		String msg = res.body();
+		JSONObject obj = new JSONObject(msg.substring(msg.indexOf("{"),
+				msg.lastIndexOf("}") + 1));
+		String tid = obj.getJSONObject("data").getString("tid");
+
+		res = Jsoup.connect("http://passport.weibo.com/visitor/visitor")
+				.data("a", "incarnate").data("t", tid).cookie("tid", tid)
+				.ignoreContentType(true).followRedirects(true).execute();
+		return res.cookies();
 	}
 
 	public Document getHtmlDocument(WeiboAccount acc, String url)
@@ -233,7 +238,13 @@ public class WeiboClient {
 		Response res = Jsoup.connect(url).cookies(acc.COOKIES).timeout(TIMEOUT)
 				.ignoreContentType(true).followRedirects(true).execute();
 		String redirected_url = res.url().toString();
-		if (redirected_url.contains("http://sass.weibo")
+		if(redirected_url.contains("sorry?pagenotfound")){
+			if(mblgHandler!=null){
+				mblgHandler.pageNotFound(url);
+			}
+			return null;
+		}
+		else if (redirected_url.contains("http://sass.weibo")
 				|| redirected_url.contains("sorry?userblock")) {
 			if (accHandler != null)
 				accHandler.freezeException(acc.UN);
@@ -261,6 +272,9 @@ public class WeiboClient {
 			System.exit(0);
 		}
 		JSONObject obj = new JSONObject(res.body()).getJSONObject("data");
+		if(obj.get("count").toString().equals("null") && mblgHandler!=null){
+			mblgHandler.pageNotFound(url);
+		}
 		return Jsoup.parse(obj.getString("html"));
 	}
 
@@ -296,7 +310,7 @@ public class WeiboClient {
 			if (accounts.size() == 0) {
 				if (!VISITOR_MODE)
 					break;
-				accounts = getVisitorAccounts();
+				accounts = getVisitorAccounts(DEFAULT_VISITOR_NUM);
 				uns = new ArrayList<String>(accounts.keySet());
 			}
 			if (count >= accounts.size())

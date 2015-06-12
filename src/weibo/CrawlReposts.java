@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import common.Out;
+import common.TimeUtils;
 import weibo.client.WeiboClient4Microblog;
 import weibo.database.AccountDB;
 import weibo.database.MicroblogDB;
@@ -22,26 +23,20 @@ public class CrawlReposts {
 		Map<String, WeiboAccount> accs = adb.getAvailableWeiboAccounts();
 		WeiboClient4Microblog weiboClient = new WeiboClient4Microblog(accs);
 		weiboClient.setAccountExceptionHandler(adb);
+		weiboClient.setMicroblogExceptionHandler(mdb);
 
-		ExecutorService es = Executors.newFixedThreadPool(4);
-		for (int i = 0; i < 4; i++) {
-			List<String> tmp = mids.subList(i * mids.size() / 4,
-					i < 3 ? (i + 1) * mids.size() / 4 : mids.size());
+		ExecutorService es = Executors.newFixedThreadPool(10);
+		for (String mid : mids) {
 			es.execute(new Runnable() {
-
 				@Override
 				public void run() {
-					int count = 0;
-					for (String mid : tmp) {
-						count++;
-						if (count % 100 == 0)
-							Out.println(count + "/" + tmp.size());
-						try {
-							mdb.updateMicroblogRelations(mid,
-									weiboClient.getRepostMids(mid));
-						} catch (SQLException e) {
-							Out.println(e.getMessage());
-						}
+					try {
+						mdb.updateMicroblogRelations(mid,
+								weiboClient.getRepostMids(mid));
+						Thread.sleep(5*1000);
+					} catch (SQLException | InterruptedException e) {
+						Out.println(e.getMessage());
+						TimeUtils.Pause(5);
 					}
 				}
 			});

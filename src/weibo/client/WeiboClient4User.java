@@ -13,7 +13,7 @@ import common.TimeUtils;
 
 public class WeiboClient4User extends WeiboClient{
 
-	public WeiboClient4User() throws IOException {
+	public WeiboClient4User() throws IOException, JSONException {
 		super();
 	}
 
