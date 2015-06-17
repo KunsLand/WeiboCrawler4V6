@@ -11,12 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import weibo.interfaces.MicroblogExceptionHandler;
-import common.Out;
+public class MicroblogDB extends MySQLDB {
 
-public class MicroblogDB extends MySQLDB implements MicroblogExceptionHandler {
-
-	public MicroblogDB() throws SQLException {
+	public MicroblogDB() {
 		super();
 	}
 
@@ -57,7 +54,8 @@ public class MicroblogDB extends MySQLDB implements MicroblogExceptionHandler {
 		return pairs;
 	}
 
-	public void updateRepostCrawled(String mid) throws SQLException {
+	public synchronized void updateRepostCrawled(String mid)
+			throws SQLException {
 		String sql = "update repostcrawled set flag=1 where mid=" + mid;
 		Statement stmt = conn.createStatement();
 		stmt.execute(sql);
@@ -65,55 +63,63 @@ public class MicroblogDB extends MySQLDB implements MicroblogExceptionHandler {
 	}
 
 	public synchronized void updateMicroblogRelations(String parentMid,
-			List<String> mids) throws SQLException {
-		if (mids == null || mids.isEmpty())
+			List<String> mids) {
+		if (mids == null)
 			return;
-		Out.println(parentMid + ": " + mids.size());
-		String sql = "replace into microblogrelation(mid, parentid) values(?,?)";
-		PreparedStatement stmt = conn.prepareStatement(sql);
-		conn.setAutoCommit(false);
-		for (String mid : mids) {
-			stmt.setString(1, mid);
-			stmt.setString(2, parentMid);
-			stmt.addBatch();
+		try {
+			updateRepostCrawled(parentMid);
+			if (mids.isEmpty())
+				return;
+			String sql = "replace into microblogrelation(mid, parentid) values(?,?)";
+			PreparedStatement stmt = conn.prepareStatement(sql);
+			conn.setAutoCommit(false);
+			for (String mid : mids) {
+				stmt.setString(1, mid);
+				stmt.setString(2, parentMid);
+				stmt.addBatch();
+			}
+			stmt.executeBatch();
+			conn.setAutoCommit(true);
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
-		stmt.executeBatch();
-		updateRepostCrawled(parentMid);
-		conn.setAutoCommit(true);
-		stmt.close();
 	}
 
-	@Override
-	public void pageNotFound(String url) {
-		String sql;
-		if (url.contains("id=")) {
-			String mid = url.substring(url.indexOf("id=") + 3,
-					url.indexOf("&page="));
-			Out.println("Page not found: " + mid);
-			sql = "update repostcrawled set pnf=1 where mid=" + mid;
-		} else {
-			Out.println("Page not found: " + url);
-			sql = "update repostcrawled set pnf=1 where url='" + url+"'";
-		}
+	public synchronized void pageNotFound(String url) {
+		String sql = "update repostcrawled set pnf=1 where url='" + url + "'";
 		Statement stmt;
 		try {
 			stmt = conn.createStatement();
 			stmt.execute(sql);
 			stmt.close();
 		} catch (SQLException e) {
-			Out.println(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
-	public void pageAvailable(String url){
-		String sql = "update repostcrawled set pnf=2 where url='" + url+"'";
+	public synchronized void zeroRepost(String mid) {
+		String sql = "update repostcrawled set flag=1 where mid=" + mid;
 		Statement stmt;
 		try {
 			stmt = conn.createStatement();
 			stmt.execute(sql);
 			stmt.close();
 		} catch (SQLException e) {
-			Out.println(e.getMessage());
+			e.printStackTrace();
 		}
 	}
+
+	public synchronized void pageAvailable(String url) {
+		String sql = "update repostcrawled set pnf=2 where url='" + url + "'";
+		Statement stmt;
+		try {
+			stmt = conn.createStatement();
+			stmt.execute(sql);
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 }

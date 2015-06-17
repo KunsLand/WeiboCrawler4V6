@@ -4,37 +4,49 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.json.JSONException;
 
-import weibo.client.WeiboClient4User;
+import weibo.client.AccountManager;
+import weibo.client.VisitorQueue;
+import weibo.client.WeiboClient;
 import weibo.database.UserDB;
 import weibo.objects.UserIndexPage;
 import common.Out;
 
 public class CrawlUserIndexPage {
-	public static void main(String[] args)
-			throws SQLException, JSONException, IOException {
+	public static void main(String[] args) throws SQLException, JSONException,
+			IOException {
 		final UserDB mysql = new UserDB();
 		List<String> uids = mysql.getIndexPageNotCrawledUIDs();
-		WeiboClient4User weiboClient = new WeiboClient4User();
-		weiboClient.setUserExceptionHandler(mysql);
-		
-		int count = 0;
+		AccountManager am = new VisitorQueue(10);
+		WeiboClient weiboClient = new WeiboClient(am);
+
+		ExecutorService es = Executors.newFixedThreadPool(10);
 		List<UserIndexPage> uips = new ArrayList<UserIndexPage>();
-		for(String uid: uids){
-			Out.println("uid => " + uid);
-			UserIndexPage uip = weiboClient.getUserIndexPage(uid);
-			if(uip == null) continue;
-			uips.add(uip);
-			if(++count == 50) {
-				Out.println("50 batches saving ...");
-				mysql.updateUserIndexPageTable(uips);
-				uips.clear();
-				count = 0;
-			}
+		Object lock = new Object();
+		for (String uid : uids) {
+			es.execute(new Runnable() {
+				@Override
+				public void run() {
+					Out.println("uid => " + uid);
+					UserIndexPage uip = weiboClient.getUserIndexPageInfo(uid);
+					if (uid != null) {
+						synchronized (lock) {
+							uips.add(uip);
+							if (uips.size() >= 50) {
+								mysql.updateUserIndexPageTable(uips);
+								uips.clear();
+							}
+						}
+					}
+				}
+			});
 		}
-		if(count > 0) mysql.updateUserIndexPageTable(uips);
+		if (uips.size() > 0)
+			mysql.updateUserIndexPageTable(uips);
 	}
 
 }

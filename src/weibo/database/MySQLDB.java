@@ -6,17 +6,23 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MySQLDB{
+public class MySQLDB {
 	protected Connection conn = null;
 
-	public MySQLDB() throws SQLException {
+	public MySQLDB() {
 		String dburl = "jdbc:mysql://localhost:3306/sinamicroblog?"
 				+ "user=root&password=root";
-		conn = DriverManager.getConnection(dburl);
+		try {
+			conn = DriverManager.getConnection(dburl);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(0);
+		}
 	}
 
-	public void setTable(String table){}
-	
+	public void setTable(String table) {
+	}
+
 	public Map<String, String> cookieString2Map(String cookie) {
 		if (cookie == null || cookie.isEmpty())
 			return null;

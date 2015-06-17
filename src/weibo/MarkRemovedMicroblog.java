@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -14,9 +13,11 @@ import org.jsoup.Jsoup;
 
 import common.Out;
 import common.TimeUtils;
-import weibo.client.WeiboClient;
+import weibo.client.AccountManager;
+import weibo.client.RequestConfig;
+import weibo.client.VisitorQueue;
+import weibo.client.WeiboAccount;
 import weibo.database.MicroblogDB;
-import weibo.interfaces.GlobalConfig;
 
 public class MarkRemovedMicroblog {
 
@@ -26,34 +27,38 @@ public class MarkRemovedMicroblog {
 		List<String> urls = new ArrayList<String>(mdb.getURLs4CrawlingReposts());
 		Out.println(urls.size() + "");
 		ExecutorService es = Executors.newFixedThreadPool(10);
-		
+
 		int count = 0;
+		AccountManager am = new VisitorQueue(10);
 		for (String url : urls) {
 			int n = ++count;
 			es.execute(new Runnable() {
 				@Override
 				public void run() {
 					Out.println(url);
+					WeiboAccount account = am.getNextAccount();
 					try {
-						Map<String, String> cookies = WeiboClient.getVisitorCookie();
-						if(cookies.isEmpty()) return;
-						Out.println(cookies.toString());
-						Response res = Jsoup.connect(url).cookies(cookies)
-								.referrer(url).timeout(GlobalConfig.TIME_REQUEST_OUT)
+						if (am.isEmpty())
+							return;
+						Response res = Jsoup.connect(url)
+								.cookies(account.COOKIES)
+								.timeout(RequestConfig.TIME_REQUEST_OUT)
 								.followRedirects(true).execute();
+						Out.println(res.url().toString());
 						if (res.body().contains(
 								"http://weibo.com/sorry?pagenotfound")) {
 							mdb.pageNotFound(url);
-						}else{
+						} else {
 							mdb.pageAvailable(url);
 						}
-						TimeUtils.Pause(GlobalConfig.TIME_REQUEST_GAP);
-					} catch (IOException | JSONException e) {
+						TimeUtils.Pause(RequestConfig.TIME_REQUEST_GAP);
+					} catch (IOException e) {
 						Out.println(e.getMessage());
-						TimeUtils.Pause(GlobalConfig.TIME_REQUEST_ERORR);
+						am.refreshCookie(account);
+						TimeUtils.Pause(RequestConfig.TIME_REQUEST_ERORR);
 					}
-					if(n%100==0){
-						Out.println(n+"/"+urls.size());
+					if (n % 100 == 0) {
+						Out.println(n + "/" + urls.size());
 					}
 				}
 			});

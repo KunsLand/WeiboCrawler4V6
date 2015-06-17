@@ -3,84 +3,59 @@ package weibo.database;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
-import weibo.interfaces.AccountExceptionHandler;
-import weibo.objects.WeiboAccount;
-import common.Out;
+import weibo.client.CookieStorage;
+import weibo.client.WeiboAccount;
 import common.TimeUtils;
 
-public class AccountDB extends MySQLDB implements AccountExceptionHandler {
+public class AccountDB extends MySQLDB implements CookieStorage {
 
-	public AccountDB() throws SQLException {
+	public AccountDB() {
 		super();
 	}
 
-	public Map<String, WeiboAccount> getBannedWeiboAccounts()
-			throws SQLException {
-		Map<String, WeiboAccount> accs = new HashMap<String, WeiboAccount>();
-		String verifycode_time = TimeUtils.format2Minute(new Date(System
-				.currentTimeMillis() - 3600 * 24 * 1000));
-		String sql = "select account,password,cookie from account"
-				+ " where banned=true and (verifycode_time is null"
-				+ " or verifycode_time <= '" + verifycode_time + "')";
+	public List<WeiboAccount> getBannedWeiboAccounts() throws SQLException {
+		List<WeiboAccount> accs = new ArrayList<WeiboAccount>();
+		String sql = "select account,password,cookie from account where banned=true";
 		Statement stmt = conn.createStatement();
 		ResultSet result = stmt.executeQuery(sql);
 		while (result.next()) {
 			WeiboAccount acc = new WeiboAccount();
-			acc.UN = result.getString(1);
-			acc.PSWD = result.getString(2);
+			acc.USERNAME = result.getString(1);
+			acc.PASSWORD = result.getString(2);
 			acc.COOKIES = cookieString2Map(result.getString(3));
-			accs.put(acc.UN, acc);
+			accs.add(acc);
 		}
 		stmt.close();
 		return accs;
 	}
 
-	public Map<String, WeiboAccount> getAvailableWeiboAccounts()
-			throws SQLException {
-		Map<String, WeiboAccount> accs = new HashMap<String, WeiboAccount>();
-		Statement stmt = conn.createStatement();
-		String verifycode_time = TimeUtils.format2Minute(new Date(System
-				.currentTimeMillis() - 3600 * 24 * 1000));
-		String sql = "select account, password, cookie from account"
-				+ " where banned=false and freeze=false and ("
-				+ "verifycode_time is null or verifycode_time <= '"
-				+ verifycode_time + "')";
-		ResultSet result = stmt.executeQuery(sql);
-		while (result.next()) {
-			WeiboAccount acc = new WeiboAccount();
-			acc.UN = result.getString(1);
-			acc.PSWD = result.getString(2);
-			acc.COOKIES = cookieString2Map(result.getString(3));
-			accs.put(acc.UN, acc);
+	public List<WeiboAccount> getAvailableWeiboAccounts(int... args) {
+		if (args.length > 1) {
+			throw new IllegalArgumentException();
 		}
-		stmt.close();
-		Out.println("NUM OF AVAILABLE ACCOUNTS => " + accs.size());
-		return accs;
-	}
-
-	public Map<String, WeiboAccount> getAvailableWeiboAccounts(int n)
-			throws SQLException {
-		Map<String, WeiboAccount> accs = new HashMap<String, WeiboAccount>();
-		Statement stmt = conn.createStatement();
-		String verifycode_time = TimeUtils.format2Minute(new Date(System
-				.currentTimeMillis() - 3600 * 24 * 1000));
-		String sql = "select account, password, cookie from account"
-				+ " where banned=false and freeze=false and ("
-				+ "verifycode_time is null or verifycode_time <= '"
-				+ verifycode_time + "') limit " + n;
-		ResultSet result = stmt.executeQuery(sql);
-		while (result.next()) {
-			WeiboAccount acc = new WeiboAccount();
-			acc.UN = result.getString(1);
-			acc.PSWD = result.getString(2);
-			acc.COOKIES = cookieString2Map(result.getString(3));
-			accs.put(acc.UN, acc);
+		List<WeiboAccount> accs = new ArrayList<WeiboAccount>();
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "select account, password, cookie from account where banned=false";
+			if (args.length == 1) {
+				sql += " order by rand() limit " + args[0];
+			}
+			ResultSet result = stmt.executeQuery(sql);
+			while (result.next()) {
+				WeiboAccount acc = new WeiboAccount();
+				acc.USERNAME = result.getString(1);
+				acc.PASSWORD = result.getString(2);
+				acc.COOKIES = cookieString2Map(result.getString(3));
+				accs.add(acc);
+			}
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
-		stmt.close();
 		return accs;
 	}
 
@@ -93,11 +68,11 @@ public class AccountDB extends MySQLDB implements AccountExceptionHandler {
 			stmt.execute(sql);
 			stmt.close();
 		} catch (SQLException e) {
-			Out.println(e.getMessage() + " => " + account);
+			e.printStackTrace();
 		}
 	}
 
-	public void setAccountFreezed(String account) {
+	public void freezeAccount(String account) {
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "update account set freeze = true where account='"
@@ -105,7 +80,31 @@ public class AccountDB extends MySQLDB implements AccountExceptionHandler {
 			stmt.execute(sql);
 			stmt.close();
 		} catch (SQLException e) {
-			Out.println(e.getMessage() + " => " + account);
+			e.printStackTrace();
+		}
+	}
+
+	public void invalidateCookie(String account) {
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "update account set cookie = null where account='"
+					+ account + "'";
+			stmt.execute(sql);
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void banAccount(String account) {
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "update account set banned = true where account='"
+					+ account + "'";
+			stmt.execute(sql);
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -118,22 +117,32 @@ public class AccountDB extends MySQLDB implements AccountExceptionHandler {
 			stmt.execute(sql);
 			stmt.close();
 		} catch (SQLException e) {
-			Out.println(e.getMessage() + " => " + account);
+			e.printStackTrace();
 		}
 	}
 
 	@Override
-	public void verifycodeException(String account) {
-		setAccountVerifyCodeTime(account);
-	}
-
-	@Override
-	public void freezeException(String account) {
-		setAccountFreezed(account);
-	}
-
-	@Override
 	public void updateCookie(WeiboAccount account) {
-		updateAccountCookie(account.UN, account.COOKIES.toString());
+		updateAccountCookie(account.USERNAME, account.COOKIES.toString());
+	}
+
+	@Override
+	public WeiboAccount getAccount() {
+		return getAvailableWeiboAccounts(1).get(0);
+	}
+
+	@Override
+	public List<WeiboAccount> getAccountList() {
+		return getAvailableWeiboAccounts();
+	}
+
+	@Override
+	public void invalidateCookie(WeiboAccount account) {
+		freezeAccount(account.USERNAME);
+	}
+
+	@Override
+	public void banAccount(WeiboAccount account) {
+		banAccount(account.USERNAME);
 	}
 }

@@ -6,9 +6,8 @@ public class UserIndexPage {
 
 	@Override
 	public String toString() {
-		return "{ UID: " + UID + ", NICK_NAME: " + NICK_NAME
-				+ ", VERIFIED: " + VERIFIED + ", LAST_POST: " + LAST_POST
-				+ ", FOLLOWS: " + FOLLOWS + ", FANS: " + FANS + ", BLOGS: "
-				+ BLOGS + " }";
+		return "{ UID: " + UID + ", NICK_NAME: " + NICK_NAME + ", VERIFIED: "
+				+ VERIFIED + ", LAST_POST: " + LAST_POST + ", FOLLOWS: "
+				+ FOLLOWS + ", FANS: " + FANS + ", BLOGS: " + BLOGS + " }";
 	}
 }

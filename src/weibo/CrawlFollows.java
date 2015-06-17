@@ -1,33 +1,43 @@
 package weibo;
 
-import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import org.json.JSONException;
-
-import weibo.client.WeiboClient4Follows;
+import weibo.client.AccountManager;
+import weibo.client.AccountQueue;
+import weibo.client.CookieStorage;
+import weibo.client.WeiboClient;
 import weibo.database.AccountDB;
 import weibo.database.UserRelationDB;
-import weibo.objects.WeiboAccount;
-import common.Out;
 
 public class CrawlFollows {
-	
-	public static void main(String[] args)
-			throws SQLException, IOException, JSONException {
+
+	public static void main(String[] args) throws SQLException {
 		UserRelationDB mysql = new UserRelationDB();
-		AccountDB accDB = new AccountDB();
+		CookieStorage accDB = new AccountDB();
+		AccountManager am = new AccountQueue(accDB);
+		WeiboClient weiboClient = new WeiboClient(am);
+
+		ExecutorService es = Executors.newFixedThreadPool(10);
 		Map<String, Integer> pairs = mysql.getFollowsUncrawledPairs();
-		Map<String, WeiboAccount> accs = accDB.getBannedWeiboAccounts();
-		WeiboClient4Follows weiboClient = new WeiboClient4Follows(accs);
-		weiboClient.setAccountExceptionHandler(accDB);
-		for(String uid: pairs.keySet()){
-			List<String> follows = weiboClient.getAllFollows(uid, pairs.get(uid));
-			if(follows == null) continue;
-			Out.println("=> " + follows.size());
-			if(follows.size() > 0) mysql.stroreRelations(uid, follows);
+		for (Map.Entry<String, Integer> entry : pairs.entrySet()) {
+			int pages = entry.getValue() / 20 + 1;
+			String uid = entry.getKey();
+			for (int page = 1; page <= pages; page++) {
+				int current = page;
+				es.execute(new Runnable() {
+					@Override
+					public void run() {
+						mysql.stroreRelations(uid, weiboClient
+								.getFollowsFromAttsListPage(uid, current));
+						if (current == pages) {
+							mysql.markFollowsCrawled(uid);
+						}
+					}
+				});
+			}
 		}
 	}
 
