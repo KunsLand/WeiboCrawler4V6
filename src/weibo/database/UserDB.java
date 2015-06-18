@@ -54,17 +54,22 @@ public class UserDB extends MySQLDB {
 		}
 	}
 
-	public List<String> getIndexPageNotCrawledUIDs() throws SQLException {
-		Statement stmt = conn.createStatement();
+	public List<String> getIndexPageNotCrawledUIDs() {
+		List<String> uids = new ArrayList<String>();
 		String sql = "select uid from user_index_page"
 				+ " where nickname is null and available != false"
 				+ " and follows_crawled != true limit 100000";
-		ResultSet result = stmt.executeQuery(sql);
-		List<String> uids = new ArrayList<String>();
-		while (result.next()) {
-			uids.add(result.getString(1));
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet result = stmt.executeQuery(sql);
+			while (result.next()) {
+				uids.add(result.getString(1));
+			}
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(0);
 		}
-		stmt.close();
 		return uids;
 	}
 
@@ -91,6 +96,7 @@ public class UserDB extends MySQLDB {
 			ps.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -104,6 +110,7 @@ public class UserDB extends MySQLDB {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 }

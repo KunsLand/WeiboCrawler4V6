@@ -36,6 +36,7 @@ public class UserRelationDB extends UserDB {
 			ps.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -48,6 +49,7 @@ public class UserRelationDB extends UserDB {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 

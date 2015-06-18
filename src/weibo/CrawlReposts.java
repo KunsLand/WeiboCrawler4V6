@@ -1,6 +1,5 @@
 package weibo;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -18,7 +17,7 @@ import weibo.database.MicroblogDB;
 
 public class CrawlReposts {
 
-	public static void main(String[] args) throws SQLException {
+	public static void main(String[] args) {
 		CookieStorage adb = new AccountDB();
 		MicroblogDB mdb = new MicroblogDB();
 		List<String> mids = new ArrayList<String>(mdb.getMids4CrawlingReposts());

@@ -17,49 +17,67 @@ public class MicroblogDB extends MySQLDB {
 		super();
 	}
 
-	public Set<String> getMids4CrawlingReposts() throws SQLException {
+	public Set<String> getMids4CrawlingReposts() {
 		Set<String> mids = new HashSet<String>();
 		String sql = "select mid from repostcrawled where flag=0 and pnf!=1";
-		Statement stmt = conn.createStatement();
-		ResultSet result = stmt.executeQuery(sql);
-		while (result.next()) {
-			mids.add(result.getString(1));
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet result = stmt.executeQuery(sql);
+			while (result.next()) {
+				mids.add(result.getString(1));
+			}
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(0);
 		}
-		stmt.close();
 		return mids;
 	}
 
-	public List<String> getURLs4CrawlingReposts() throws SQLException {
+	public List<String> getURLs4CrawlingReposts() {
 		List<String> urls = new ArrayList<String>();
 		String sql = "select url from repostcrawled where flag=0 and pnf=0";
-		Statement stmt = conn.createStatement();
-		ResultSet result = stmt.executeQuery(sql);
-		while (result.next()) {
-			urls.add(result.getString(1));
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet result = stmt.executeQuery(sql);
+			while (result.next()) {
+				urls.add(result.getString(1));
+			}
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(0);
 		}
-		stmt.close();
 		return urls;
 	}
 
-	public Map<String, String> getMidsAndURLs4CrawlingReposts()
-			throws SQLException {
+	public Map<String, String> getMidsAndURLs4CrawlingReposts() {
 		Map<String, String> pairs = new HashMap<String, String>();
 		String sql = "select mid,url from repostcrawled where flag=0";
-		Statement stmt = conn.createStatement();
-		ResultSet result = stmt.executeQuery(sql);
-		while (result.next()) {
-			pairs.put(result.getString(1), result.getString(2));
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet result = stmt.executeQuery(sql);
+			while (result.next()) {
+				pairs.put(result.getString(1), result.getString(2));
+			}
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(0);
 		}
-		stmt.close();
 		return pairs;
 	}
 
-	public synchronized void updateRepostCrawled(String mid)
-			throws SQLException {
+	public synchronized void updateRepostCrawled(String mid) {
 		String sql = "update repostcrawled set flag=1 where mid=" + mid;
-		Statement stmt = conn.createStatement();
-		stmt.execute(sql);
-		stmt.close();
+		try {
+			Statement stmt = conn.createStatement();
+			stmt.execute(sql);
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(0);
+		}
 	}
 
 	public synchronized void updateMicroblogRelations(String parentMid,
@@ -83,6 +101,7 @@ public class MicroblogDB extends MySQLDB {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -95,6 +114,7 @@ public class MicroblogDB extends MySQLDB {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -107,6 +127,7 @@ public class MicroblogDB extends MySQLDB {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -119,6 +140,7 @@ public class MicroblogDB extends MySQLDB {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 

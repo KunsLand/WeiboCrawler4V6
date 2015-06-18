@@ -1,6 +1,5 @@
 package weibo;
 
-import java.sql.SQLException;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,7 +13,7 @@ import weibo.database.UserRelationDB;
 
 public class CrawlFollows {
 
-	public static void main(String[] args) throws SQLException {
+	public static void main(String[] args) {
 		UserRelationDB mysql = new UserRelationDB();
 		CookieStorage accDB = new AccountDB();
 		AccountManager am = new AccountQueue(accDB);

@@ -16,11 +16,15 @@ import common.TimeUtils;
 
 public class Visitor {
 
-	public static List<Map<String, String>> newVisitorCookies(int n)
-			throws IOException, JSONException {
+	public static List<Map<String, String>> newVisitorCookies(int n) {
 		List<Map<String, String>> cookies = new ArrayList<Map<String, String>>();
 		for (int i = 0; i < n; i++) {
-			Map<String, String> cookie = newVisitorCookie();
+			Map<String, String> cookie = null;
+			try {
+				cookie = newVisitorCookie();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			if (cookie == null)
 				continue;
 			Out.println(cookie.toString());

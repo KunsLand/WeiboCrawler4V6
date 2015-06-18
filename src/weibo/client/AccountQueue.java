@@ -22,7 +22,7 @@ public class AccountQueue implements AccountManager {
 	}
 
 	private void checkCookies() {
-		Out.println("Number of accounts in queue: "+accounts.size());
+		Out.println("Number of accounts in queue: " + accounts.size());
 		for (int i = 0; i < accounts.size(); i++) {
 			Map<String, String> cookie = accounts.get(i).COOKIES;
 			if (cookie == null || cookie.isEmpty()) {
@@ -30,7 +30,7 @@ public class AccountQueue implements AccountManager {
 				refreshCookie(accounts.get(i));
 			}
 		}
-		Out.println("Number of accounts in queue: "+accounts.size());
+		Out.println("Number of accounts in queue: " + accounts.size());
 	}
 
 	@Override

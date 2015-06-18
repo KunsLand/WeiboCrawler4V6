@@ -71,8 +71,10 @@ public class CloudSight {
 			}
 		}
 		httpClient.close();
-		return code.replaceAll(
-				"cap(t?)cha|verification|code|red|blue|pink|image|logo|\\s", "");
+		return code
+				.replaceAll(
+						"cap(t?)cha|verification|code|red|blue|pink|image|logo|\\s",
+						"");
 	}
 
 	public static void main(String[] args) throws ClientProtocolException,

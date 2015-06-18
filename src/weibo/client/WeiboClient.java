@@ -65,18 +65,25 @@ public class WeiboClient {
 				if (redirected_url.matches(".*signup.*|.*login.*|.*passport.*")) {
 					Out.println("Cookie is invalidated: " + account.USERNAME);
 					accountManager.refreshCookie(account);
-				} else if (redirected_url.matches(".*userblock.*")
-						|| res.body().contains("veriyfycode")) {
-					Out.println("Blocked: " + account.USERNAME);
-					accountManager.removeAccount(account);
+				} else if (redirected_url.matches(".*userblock.*")) {
+					Out.println("Redirected FROM " + url + " TO "
+							+ redirected_url);
+					// Out.println("Blocked: " + account.USERNAME);
+					// accountManager.removeAccount(account);
+				} else if (res.body().contains("veriyfycode")) {
+					Out.println("Return page contains verifycode when using cookie: "
+							+ account.USERNAME
+							+ " where url = "
+							+ url
+							+ " and redirected to " + redirected_url);
 				} else if (redirected_url.matches(".*pagenotfound.*")) {
-					Out.println("Page not found: "+ url);
+					Out.println("Page not found: " + url + ", redirected to " + redirected_url);
 					break;
 				} else if (redirected_url.contains("10.3.8.211")) {
-					Out.println("Network Expired.");
+					Out.println("Network Expired. Redirected url is " + redirected_url);
 					System.exit(0);
 				} else if (redirected_url.matches(".*usernotexists.*")) {
-					Out.println("User not exists: " + url);
+					Out.println("User not exists: " + url + ", redirected to " + redirected_url);
 					break;
 				} else {
 					TimeUtils.Pause(RequestConfig.TIME_REQUEST_GAP);
@@ -136,7 +143,7 @@ public class WeiboClient {
 			url = "http://weibo.com/aj/v6/mblog/info/big?ajwvr=6&"
 					+ next.select("span").first().attr("action-data");
 		}
-		Out.println("Reposts of mid: "+mid + ": "+mids.size());
+		Out.println("Reposts of mid: " + mid + ": " + mids.size());
 		return mids;
 	}
 

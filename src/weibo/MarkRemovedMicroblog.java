@@ -1,13 +1,11 @@
 package weibo;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.json.JSONException;
 import org.jsoup.Connection.Response;
 import org.jsoup.Jsoup;
 
@@ -21,8 +19,7 @@ import weibo.database.MicroblogDB;
 
 public class MarkRemovedMicroblog {
 
-	public static void main(String[] args) throws SQLException, IOException,
-			JSONException {
+	public static void main(String[] args) {
 		MicroblogDB mdb = new MicroblogDB();
 		List<String> urls = new ArrayList<String>(mdb.getURLs4CrawlingReposts());
 		Out.println(urls.size() + "");

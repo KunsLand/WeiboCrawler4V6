@@ -1,13 +1,9 @@
 package weibo;
 
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import org.json.JSONException;
 
 import weibo.client.AccountManager;
 import weibo.client.VisitorQueue;
@@ -17,8 +13,7 @@ import weibo.objects.UserIndexPage;
 import common.Out;
 
 public class CrawlUserIndexPage {
-	public static void main(String[] args) throws SQLException, JSONException,
-			IOException {
+	public static void main(String[] args) {
 		final UserDB mysql = new UserDB();
 		List<String> uids = mysql.getIndexPageNotCrawledUIDs();
 		AccountManager am = new VisitorQueue(10);

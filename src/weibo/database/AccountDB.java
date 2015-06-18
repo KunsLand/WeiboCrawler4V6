@@ -55,6 +55,7 @@ public class AccountDB extends MySQLDB implements CookieStorage {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 		return accs;
 	}
@@ -69,6 +70,7 @@ public class AccountDB extends MySQLDB implements CookieStorage {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -81,6 +83,7 @@ public class AccountDB extends MySQLDB implements CookieStorage {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -93,6 +96,7 @@ public class AccountDB extends MySQLDB implements CookieStorage {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -105,6 +109,7 @@ public class AccountDB extends MySQLDB implements CookieStorage {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
@@ -118,6 +123,7 @@ public class AccountDB extends MySQLDB implements CookieStorage {
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 

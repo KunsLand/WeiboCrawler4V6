@@ -5,15 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.json.JSONException;
-
 import common.Out;
 
 public class VisitorQueue implements AccountManager {
 	private int current;
 	private List<WeiboAccount> visitors;
 
-	public VisitorQueue(int n) throws IOException, JSONException {
+	public VisitorQueue(int n) {
 		List<Map<String, String>> cookies = Visitor.newVisitorCookies(n);
 		visitors = new ArrayList<WeiboAccount>();
 		for (int i = 0; i < cookies.size(); i++) {

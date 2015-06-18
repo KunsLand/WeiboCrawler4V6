@@ -113,28 +113,33 @@ public class Test {
 		Out.println("" + (arg instanceof HashMap));
 		Out.println(arg.toString());
 	}
-	
-	public static void testNewLogin(){
+
+	public static void testNewLogin() {
 		WeiboAccount account = new AccountDB().getAccount();
 		try {
-			Out.println(Account.newCookie(account.USERNAME, account.PASSWORD).toString());
+			Out.println(Account.newCookie(account.USERNAME, account.PASSWORD)
+					.toString());
 		} catch (IOException | JSONException e) {
 			e.printStackTrace();
 		}
 	}
-	
-	public static void testRefreshAllCookie(){
+
+	public static void testRefreshAllCookie() {
 		CookieStorage cs = new AccountDB();
 		AccountManager am = new AccountQueue(cs);
-		for(int i=0;i<10;i++){
+		for (int i = 0; i < 10; i++) {
 			WeiboAccount acc = am.getNextAccount();
-			Out.println(acc.USERNAME+": "+acc.COOKIES);
+			Out.println(acc.USERNAME + ": " + acc.COOKIES);
 		}
+	}
+
+	public static void testRegEx() {
+		Out.println("http://login.sina.com.cn".matches(".*loginx.*|.*sina.*"));
 	}
 
 	public static void main(String[] args) throws IOException, JSONException,
 			InterruptedException {
-		testRefreshAllCookie();
+		testRegEx();
 	}
 
 }
