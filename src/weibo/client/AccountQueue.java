@@ -91,4 +91,10 @@ public class AccountQueue implements AccountManager {
 		return null;
 	}
 
+	@Override
+	public synchronized boolean unfreezeAccount(WeiboAccount account) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 }

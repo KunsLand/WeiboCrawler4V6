@@ -74,4 +74,9 @@ public class VisitorQueue implements AccountManager {
 		return null;
 	}
 
+	@Override
+	public boolean unfreezeAccount(WeiboAccount account) {
+		return refreshCookie(account);
+	}
+
 }
