@@ -77,7 +77,7 @@ public class AccountDB extends MySQLDB implements CookieStorage {
 	public void freezeAccount(String account) {
 		try {
 			Statement stmt = conn.createStatement();
-			String sql = "update account set freeze = true where account='"
+			String sql = "update account set freeze = true, cookie = null where account='"
 					+ account + "'";
 			stmt.execute(sql);
 			stmt.close();

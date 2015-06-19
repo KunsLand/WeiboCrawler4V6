@@ -114,7 +114,8 @@ public class Account {
 		// retcode=4049, CAPTCHA code is needed
 		// retcode=2070, you submit wrong CAPTCHA code
 		while (res.body().contains("retcode=4049")
-				|| res.body().contains("retcode=2070")) {
+				|| res.body().contains("retcode=2070")
+				|| res.body().contains("retcode=2093")) {
 			String captcha = null;
 			while (true) {
 				String captchaUrl = "http://login.sina.com.cn/cgi/pin.php?r="

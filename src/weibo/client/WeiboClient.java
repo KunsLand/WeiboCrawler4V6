@@ -66,7 +66,8 @@ public class WeiboClient {
 					Out.println("Cookie is invalidated: " + account.USERNAME);
 					accountManager.refreshCookie(account);
 				} else if (redirected_url.matches(".*userblock.*")) {
-					Out.println("Redirected FROM " + url + " TO "
+					Out.println("Userblock warning: " + account.USERNAME
+							+ ", redirected FROM " + url + " TO "
 							+ redirected_url);
 					// Out.println("Blocked: " + account.USERNAME);
 					// accountManager.removeAccount(account);
@@ -77,14 +78,21 @@ public class WeiboClient {
 							+ url
 							+ " and redirected to " + redirected_url);
 				} else if (redirected_url.matches(".*pagenotfound.*")) {
-					Out.println("Page not found: " + url + ", redirected to " + redirected_url);
+					Out.println("Page not found: " + url + ", redirected to "
+							+ redirected_url);
 					break;
 				} else if (redirected_url.contains("10.3.8.211")) {
-					Out.println("Network Expired. Redirected url is " + redirected_url);
+					Out.println("Network Expired. Redirected url is "
+							+ redirected_url);
 					System.exit(0);
 				} else if (redirected_url.matches(".*usernotexists.*")) {
-					Out.println("User not exists: " + url + ", redirected to " + redirected_url);
+					Out.println("User not exists: " + url + ", redirected to "
+							+ redirected_url);
 					break;
+				} else if (redirected_url.matches(".*sass.*unfreeze.*")) {
+					Out.println("User freezed warning: " + account.USERNAME
+							+ ", redirected to " + redirected_url);
+					accountManager.removeAccount(account);
 				} else {
 					TimeUtils.Pause(RequestConfig.TIME_REQUEST_GAP);
 					break;
@@ -119,17 +127,21 @@ public class WeiboClient {
 	public List<String> getRepostMids(String mid) {
 		Out.println("Reposts of mid: " + mid);
 		List<String> mids = new ArrayList<String>();
+		Response res = null;
 		String json = null;
 		String url = "http://weibo.com/aj/v6/mblog/info/big?ajwvr=6&id=" + mid
 				+ "&page=1&__rnd=" + System.currentTimeMillis();
 		while (true) {
-			json = getResponse(url).body();
+			res = getResponse(url);
+			json = res.body();
 			Document doc = null;
 			try {
 				JSONObject obj = new JSONObject(json);
 				doc = Jsoup.parse(obj.getJSONObject("data").getString("html"));
 			} catch (JSONException e) {
-				Out.println(e.getMessage() + ": " + url);
+				Out.println(e.getMessage() + ": " + url + ", redirected to "
+						+ res.url().toString());
+				continue;
 			}
 			if (doc == null)
 				break;
