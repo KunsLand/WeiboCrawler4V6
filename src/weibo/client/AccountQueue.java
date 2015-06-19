@@ -13,10 +13,12 @@ public class AccountQueue implements AccountManager {
 	private int current;
 	private List<WeiboAccount> accounts;
 	private CookieStorage cookieStorage;
+	private FaceNameStorage faceName;
 
-	public AccountQueue(CookieStorage cookieStorage) {
+	public AccountQueue(CookieStorage cookieStorage, FaceNameStorage faceName) {
 		this.accounts = cookieStorage.getAccountList();
 		this.cookieStorage = cookieStorage;
+		this.faceName = faceName;
 		checkCookies();
 		current = 0;
 	}
@@ -93,7 +95,10 @@ public class AccountQueue implements AccountManager {
 
 	@Override
 	public synchronized boolean unfreezeAccount(WeiboAccount account) {
-		// TODO Auto-generated method stub
+		if(Unfreeze.unfreezeAccount(account, faceName)){
+			cookieStorage.updateCookie(account);
+			return true;
+		}
 		return false;
 	}
 

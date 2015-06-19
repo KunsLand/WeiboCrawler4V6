@@ -51,7 +51,7 @@ public class WeiboClient {
 		return Jsoup.parse(sb.toString());
 	}
 
-	public Response getResponse(String url) {
+	public synchronized Response getResponse(String url) {
 		Response res = null;
 		while (true) {
 			checkAccounts();

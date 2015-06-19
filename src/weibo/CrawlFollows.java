@@ -16,7 +16,7 @@ public class CrawlFollows {
 	public static void main(String[] args) {
 		UserRelationDB mysql = new UserRelationDB();
 		CookieStorage accDB = new AccountDB();
-		AccountManager am = new AccountQueue(accDB);
+		AccountManager am = new AccountQueue(accDB, new FaceNamePairs("G:/sina-unfreeze"));
 		WeiboClient weiboClient = new WeiboClient(am);
 
 		ExecutorService es = Executors.newFixedThreadPool(10);

@@ -21,7 +21,7 @@ public class CrawlReposts {
 		CookieStorage adb = new AccountDB();
 		MicroblogDB mdb = new MicroblogDB();
 		List<String> mids = new ArrayList<String>(mdb.getMids4CrawlingReposts());
-		AccountManager am = new AccountQueue(adb);
+		AccountManager am = new AccountQueue(adb, new FaceNamePairs("G:/sina-unfreeze"));
 		WeiboClient weiboClient = new WeiboClient(am);
 
 		ExecutorService es = Executors.newFixedThreadPool(10);
