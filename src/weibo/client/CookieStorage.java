@@ -11,6 +11,8 @@ public interface CookieStorage {
 	public void updateCookie(WeiboAccount account);
 
 	public void invalidateCookie(WeiboAccount account);
+	
+	public void unfreezeAccount(WeiboAccount account);
 
 	public void banAccount(WeiboAccount account);
 }
