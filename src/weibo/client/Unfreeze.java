@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
+import org.json.JSONException;
 import org.jsoup.Jsoup;
 import org.jsoup.Connection.Method;
 import org.jsoup.Connection.Response;
@@ -19,6 +21,8 @@ import common.TimeUtils;
 
 public class Unfreeze {
 
+	private static Scanner wait = new Scanner(System.in);
+
 	public static byte[] getImage(String url, Map<String, String> cookie) {
 		try {
 			return Jsoup.connect(url).cookies(cookie).followRedirects(true)
@@ -26,7 +30,7 @@ public class Unfreeze {
 					.timeout(RequestConfig.TIME_REQUEST_OUT).execute()
 					.bodyAsBytes();
 		} catch (IOException e) {
-			Out.println(e.getMessage());
+			Out.println("EXCEPTION:" + url + ", " + e.getMessage());
 		}
 		return null;
 	}
@@ -34,7 +38,7 @@ public class Unfreeze {
 	public static List<ImageBytes> getFaces(Document doc,
 			Map<String, String> cookie) {
 		List<ImageBytes> faces_bytes = new ArrayList<ImageBytes>();
-		Elements faces = doc.select("div.faces_list img");
+		Elements faces = doc.select("div.f_face > img.f_img");
 		if (faces != null) {
 			for (Element face : faces) {
 				byte[] img = null;
@@ -73,7 +77,7 @@ public class Unfreeze {
 	}
 
 	public synchronized static boolean unfreezeAccount(WeiboAccount account,
-			FaceNameStorage fs) {
+			FaceNameStorage fs, CookieStorage cs) {
 		if (fs == null)
 			return false;
 		Out.println("Unfreeze account: " + account.USERNAME);
@@ -83,10 +87,30 @@ public class Unfreeze {
 						.followRedirects(true).cookies(account.COOKIES)
 						.timeout(RequestConfig.TIME_REQUEST_OUT)
 						.ignoreContentType(true).execute();
-				if (!res.url().toString().matches(".*sass.*unfreeze.*")) {
+				if (res.url().toString().matches(".*login.*")) {
+					Out.println("Cookie expired. Refreshing cookie...");
+					try {
+						account.COOKIES = Account.newCookie(account.USERNAME,
+								account.PASSWORD);
+						cs.updateCookie(account);
+					} catch (JSONException e) {
+						Out.println("Cookie refresh failed, " + e.getMessage());
+						cs.invalidateCookie(account);
+					}
+					continue;
+				} else if (!res.url().toString().matches(".*sass.*unfreeze.*")) {
+					Out.println("No need to unfreeze, redirected to: "
+							+ res.url());
 					break;
 				}
 				Document doc = res.parse();
+				if (!doc.select("#pl_unfreeze_phone").isEmpty()) {
+					Out.println("Unfreeze by PHONE! (" + account.USERNAME + ","
+							+ account.PASSWORD + ")\n"
+							+ "Press ENTER key when you are done.");
+					wait.nextLine();
+					return true;
+				}
 				List<ImageBytes> faces_bytes = getFaces(doc, account.COOKIES);
 				List<ImageBytes> names_bytes = getNames(doc, account.COOKIES);
 				Map<String, Integer> names = new HashMap<String, Integer>();
@@ -94,8 +118,9 @@ public class Unfreeze {
 					names.put(names_bytes.get(i).getMD5Checksum(), i);
 				}
 				if (fs.storeImages(faces_bytes, names_bytes)) {
-					Out.println("WAIT UNTIL THE FACE-NAME PAIRS ARE MANNUALLY SOVLED.");
-					System.in.read();
+					Out.println("Mannually sovle FACE-NAME pairs.\n"
+							+ " Press ENTER key when you are done.");
+					wait.nextLine();
 				}
 				Map<String, String> pairs = fs.getPairs();
 				String ans = "";
@@ -104,6 +129,7 @@ public class Unfreeze {
 							.getMD5Checksum()));
 				}
 				if (ans.length() != 5) {
+					Out.println("Order not right: " + ans);
 					continue;
 				}
 				String url = "http://sass.weibo.com/aj/quickdefreeze/check?_wv=5&__rnd="
@@ -118,9 +144,11 @@ public class Unfreeze {
 					Out.println("Unfreeze failed: " + res.url());
 					continue;
 				}
+				Out.println("Unfreeze Succeed!");
 				return true;
 			} catch (IOException e) {
-				Out.println(e.getMessage());
+				Out.println("IOEXCEPTION:" + account.USERNAME + ", "
+						+ e.getMessage());
 				TimeUtils.PauseOneMinute();
 			}
 		}

@@ -95,7 +95,7 @@ public class AccountQueue implements AccountManager {
 
 	@Override
 	public synchronized boolean unfreezeAccount(WeiboAccount account) {
-		if(Unfreeze.unfreezeAccount(account, faceName)){
+		if(Unfreeze.unfreezeAccount(account, faceName, cookieStorage)){
 			cookieStorage.updateCookie(account);
 			return true;
 		}

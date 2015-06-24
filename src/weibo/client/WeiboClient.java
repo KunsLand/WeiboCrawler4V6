@@ -51,8 +51,9 @@ public class WeiboClient {
 		return Jsoup.parse(sb.toString());
 	}
 
-	public synchronized Response getResponse(String url) {
+	public Response getResponse(String url) {
 		Response res = null;
+		int count = 0;
 		while (true) {
 			checkAccounts();
 			WeiboAccount account = accountManager.getNextAccount();
@@ -94,12 +95,13 @@ public class WeiboClient {
 							+ ", redirected to " + redirected_url);
 					accountManager.removeAccount(account);
 				} else {
-					TimeUtils.Pause(RequestConfig.TIME_REQUEST_GAP);
+					 TimeUtils.Pause(RequestConfig.TIME_REQUEST_GAP);
 					break;
 				}
 			} catch (IOException e) {
 				Out.println(e.getMessage());
-				TimeUtils.Pause(RequestConfig.TIME_REQUEST_ERORR);
+				count++;
+				TimeUtils.Pause(RequestConfig.TIME_REQUEST_ERORR * count);
 			}
 		}
 		return res;

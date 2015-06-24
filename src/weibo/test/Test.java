@@ -29,7 +29,6 @@ import weibo.client.CookieStorage;
 import weibo.client.WeiboAccount;
 import weibo.database.AccountDB;
 import common.Out;
-import common.TimeUtils;
 
 public class Test {
 
@@ -164,26 +163,29 @@ public class Test {
 		}
 	}
 
+	public static void compareSHA() {
+		File file = new File("G:/sina-unfreeze/wqs2.png");
+		Out.println("Compare MD5, SHA1, SHA256.");
+		try {
+			byte[] img = Files.readAllBytes(file.toPath());
+			Out.println(new String(Hex.encodeHex(MessageDigest.getInstance(
+					"MD5").digest(img))));
+			Out.println(new String(Hex.encodeHex(MessageDigest.getInstance(
+					"SHA1").digest(img))));
+//			Out.println(new String(Hex.encodeHex(MessageDigest.getInstance(
+//					"SHA256").digest(img))));
+		} catch (NoSuchAlgorithmException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public static void crackUnfreeze() {
 		CookieStorage cs = new AccountDB();
 		AccountManager am = new AccountQueue(cs, new FaceNamePairs(
 				"G:/sina-unfreeze"));
-		int i = 0;
-		while (i < 95) {
+		for (int i = 0; i < 95; i++) {
 			WeiboAccount account = am.getNextAccount();
-			try {
-				Response res = Jsoup.connect("http://www.weibo.com")
-						.cookies(account.COOKIES).ignoreContentType(true)
-						.timeout(10 * 1000).followRedirects(true).execute();
-				if (!res.url().toString().matches(".*sass.*unfreeze.*")) {
-					continue;
-				}
-				am.unfreezeAccount(account);
-				i++;
-			} catch (IOException e) {
-				Out.println(e.getMessage());
-				TimeUtils.PauseOneMinute();
-			}
+			am.unfreezeAccount(account);
 		}
 	}
 
@@ -203,7 +205,7 @@ public class Test {
 
 	public static void main(String[] args) throws IOException, JSONException,
 			InterruptedException {
-		crackUnfreeze();
+		compareSHA();
 	}
 
 }
